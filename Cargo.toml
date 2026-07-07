@@ -6,6 +6,11 @@ members = [
   "premium_vault",
   "reserve_vault",
   "oracle_adapter",
+  "payment_receipt_registry",
+  "username_registry",
+  "receipt_access_registry",
+  "dispute_registry",
+  "receipt_anchor_registry",
 ]
 
 [workspace.package]
