@@ -2,7 +2,6 @@ extern crate std;
 
 use super::{PositionStatus, ProtectionEngine, ProtectionEngineClient};
 use oracle_adapter::{OracleAdapter, OracleAdapterClient};
-use premium_vault::{PremiumVault, PremiumVaultClient};
 use protected_balance_vault::{ProtectedBalanceVault, ProtectedBalanceVaultClient};
 use reserve_vault::{ReserveVault, ReserveVaultClient};
 use soroban_sdk::{
@@ -10,14 +9,16 @@ use soroban_sdk::{
     token, Address, Env,
 };
 
-const PEG: i128 = 100_000_000;
-const TRIGGER_098: i128 = 98_000_000;
-const PRICE_099: i128 = 99_000_000;
+const ENTRY_PRICE: i128 = 100_000_000;
+const PRICE_101: i128 = 101_000_000;
 const PRICE_094: i128 = 94_000_000;
 const AMOUNT: i128 = 1_000;
 const FEE: i128 = 10;
 const MAX_PAYOUT: i128 = 100;
 const DURATION: u64 = 604_800;
+const ONE_DAY: u64 = 86_400;
+const FOURTEEN_DAYS: u64 = 1_209_600;
+const THIRTY_DAYS: u64 = 2_592_000;
 
 struct Fixture {
     env: Env,
@@ -26,7 +27,6 @@ struct Fixture {
     other: Address,
     engine_id: Address,
     protected_vault_id: Address,
-    premium_vault_id: Address,
     reserve_vault_id: Address,
     oracle_id: Address,
     protected_asset: Address,
@@ -40,10 +40,6 @@ impl Fixture {
 
     fn protected_vault(&self) -> ProtectedBalanceVaultClient<'_> {
         ProtectedBalanceVaultClient::new(&self.env, &self.protected_vault_id)
-    }
-
-    fn premium_vault(&self) -> PremiumVaultClient<'_> {
-        PremiumVaultClient::new(&self.env, &self.premium_vault_id)
     }
 
     fn reserve_vault(&self) -> ReserveVaultClient<'_> {
@@ -69,7 +65,6 @@ impl Fixture {
             &self.payout_asset,
             &AMOUNT,
             &DURATION,
-            &TRIGGER_098,
         )
     }
 }
@@ -93,31 +88,28 @@ fn setup(reserve_amount: i128) -> Fixture {
     token::StellarAssetClient::new(&env, &payout_asset).mint(&admin, &10_000);
 
     let protected_vault_id = env.register(ProtectedBalanceVault, ());
-    let premium_vault_id = env.register(PremiumVault, ());
     let reserve_vault_id = env.register(ReserveVault, ());
     let oracle_id = env.register(OracleAdapter, ());
     let engine_id = env.register(ProtectionEngine, ());
 
     let protected_vault = ProtectedBalanceVaultClient::new(&env, &protected_vault_id);
-    let premium_vault = PremiumVaultClient::new(&env, &premium_vault_id);
     let reserve_vault = ReserveVaultClient::new(&env, &reserve_vault_id);
     let oracle = OracleAdapterClient::new(&env, &oracle_id);
     let engine = ProtectionEngineClient::new(&env, &engine_id);
 
     protected_vault.initialize(&admin, &engine_id);
     reserve_vault.initialize(&admin, &engine_id);
-    premium_vault.initialize(&admin, &engine_id, &reserve_vault_id);
     oracle.initialize(&admin);
     engine.initialize(
         &admin,
         &protected_vault_id,
-        &premium_vault_id,
         &reserve_vault_id,
         &oracle_id,
         &100,
         &1_000,
+        &3_600,
     );
-    oracle.set_price(&admin, &protected_asset, &PEG);
+    oracle.set_price(&admin, &protected_asset, &ENTRY_PRICE);
     if reserve_amount > 0 {
         reserve_vault.deposit_reserve(&admin, &payout_asset, &reserve_amount);
     }
@@ -129,7 +121,6 @@ fn setup(reserve_amount: i128) -> Fixture {
         other,
         engine_id,
         protected_vault_id,
-        premium_vault_id,
         reserve_vault_id,
         oracle_id,
         protected_asset,
@@ -146,6 +137,7 @@ fn position_creation_moves_funds_and_locks_reserve() {
     assert_eq!(position.status, PositionStatus::Active);
     assert_eq!(position.protected_amount, AMOUNT);
     assert_eq!(position.fee_paid, FEE);
+    assert_eq!(position.entry_price, ENTRY_PRICE);
     assert_eq!(
         fixture.protected_vault().get_position_balance(&position_id),
         AMOUNT
@@ -158,7 +150,7 @@ fn position_creation_moves_funds_and_locks_reserve() {
     );
     assert_eq!(
         fixture
-            .premium_vault()
+            .reserve_vault()
             .get_total_premiums(&fixture.protected_asset),
         FEE
     );
@@ -188,6 +180,33 @@ fn position_creation_moves_funds_and_locks_reserve() {
     let user_positions = fixture.engine().get_user_positions(&fixture.user);
     assert_eq!(user_positions.len(), 1);
     assert_eq!(user_positions.get(0).unwrap(), position_id);
+}
+
+#[test]
+fn duration_based_fee_quotes_match_supported_terms() {
+    let fixture = setup(1_000);
+    let engine = fixture.engine();
+
+    assert_eq!(engine.get_fee_quote_for_duration(&AMOUNT, &ONE_DAY), 3);
+    assert_eq!(engine.get_fee_quote_for_duration(&AMOUNT, &DURATION), 10);
+    assert_eq!(
+        engine.get_fee_quote_for_duration(&AMOUNT, &FOURTEEN_DAYS),
+        15
+    );
+    assert_eq!(engine.get_fee_quote_for_duration(&AMOUNT, &THIRTY_DAYS), 25);
+}
+
+#[test]
+#[should_panic]
+fn duration_over_thirty_days_is_rejected() {
+    let fixture = setup(1_000);
+    fixture.engine().create_position(
+        &fixture.user,
+        &fixture.protected_asset,
+        &fixture.payout_asset,
+        &AMOUNT,
+        &(THIRTY_DAYS + 1),
+    );
 }
 
 #[test]
@@ -260,6 +279,26 @@ fn trigger_claim_and_principal_withdrawal_flow() {
     fixture.engine().claim_payout(&fixture.user, &position_id);
     let claimed = fixture.engine().get_position(&position_id);
     assert_eq!(claimed.status, PositionStatus::Claimed);
+    assert_eq!(fixture.payout_token().balance(&fixture.user), 0);
+    assert_eq!(
+        fixture
+            .reserve_vault()
+            .get_epoch_total(&1, &fixture.payout_asset),
+        60
+    );
+    assert_eq!(
+        fixture
+            .reserve_vault()
+            .close_epoch(&fixture.admin, &fixture.payout_asset),
+        60
+    );
+    assert_eq!(fixture.reserve_vault().quote_withdraw(&position_id), 60);
+    assert_eq!(
+        fixture
+            .reserve_vault()
+            .withdraw_reserved(&fixture.user, &position_id),
+        60
+    );
     assert_eq!(fixture.payout_token().balance(&fixture.user), 60);
     assert_eq!(
         fixture
@@ -298,12 +337,24 @@ fn user_cannot_claim_twice() {
 
 #[test]
 #[should_panic]
-fn price_above_trigger_does_not_trigger() {
+fn price_at_or_above_entry_does_not_trigger() {
     let fixture = setup(1_000);
     let position_id = fixture.create_position();
     fixture
         .oracle()
-        .set_price(&fixture.admin, &fixture.protected_asset, &PRICE_099);
+        .set_price(&fixture.admin, &fixture.protected_asset, &PRICE_101);
+    fixture.engine().check_and_trigger(&position_id);
+}
+
+#[test]
+#[should_panic]
+fn stale_oracle_price_cannot_trigger() {
+    let fixture = setup(1_000);
+    let position_id = fixture.create_position();
+    fixture
+        .oracle()
+        .set_price(&fixture.admin, &fixture.protected_asset, &PRICE_094);
+    fixture.env.ledger().set_timestamp(1_000 + 3_601);
     fixture.engine().check_and_trigger(&position_id);
 }
 
@@ -313,7 +364,7 @@ fn no_trigger_expires_normally() {
     let position_id = fixture.create_position();
     fixture
         .oracle()
-        .set_price(&fixture.admin, &fixture.protected_asset, &PRICE_099);
+        .set_price(&fixture.admin, &fixture.protected_asset, &PRICE_101);
     fixture.env.ledger().set_timestamp(1_000 + DURATION + 1);
     fixture.engine().expire_position(&position_id);
     assert_eq!(
@@ -372,20 +423,19 @@ fn invalid_amount_is_rejected() {
         &fixture.payout_asset,
         &0,
         &DURATION,
-        &TRIGGER_098,
     );
 }
 
 #[test]
 #[should_panic]
-fn invalid_trigger_is_rejected() {
+fn stale_oracle_price_cannot_create_position() {
     let fixture = setup(1_000);
+    fixture.env.ledger().set_timestamp(1_000 + 3_601);
     fixture.engine().create_position(
         &fixture.user,
         &fixture.protected_asset,
         &fixture.payout_asset,
         &AMOUNT,
         &DURATION,
-        &(PEG + 1),
     );
 }

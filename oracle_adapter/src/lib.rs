@@ -47,6 +47,7 @@ impl OracleAdapter {
         if env.storage().instance().has(&DataKey::Admin) {
             panic_with_error!(&env, OracleError::AlreadyInitialized);
         }
+        admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
     }
 

@@ -18,14 +18,14 @@ fn test_register_and_get() {
     let username = String::from_str(&env, "alice_123");
 
     assert!(client.is_available(&username));
-    
+
     client.register_username(&user1, &username);
-    
+
     assert!(!client.is_available(&username));
-    
+
     let addr = client.get_address(&username);
     assert_eq!(addr, user1);
-    
+
     let u = client.get_username(&user1);
     assert_eq!(u, username);
 }
@@ -51,10 +51,19 @@ fn test_invalid_username_chars() {
 }
 
 #[test]
+#[should_panic]
+fn test_uppercase_username_rejected() {
+    let (env, client) = setup();
+    let user1 = Address::generate(&env);
+    let username = String::from_str(&env, "Alice");
+    client.register_username(&user1, &username);
+}
+
+#[test]
 fn test_update_username() {
     let (env, client) = setup();
     let user1 = Address::generate(&env);
-    
+
     let old_username = String::from_str(&env, "alice_old");
     let new_username = String::from_str(&env, "alice_new");
 
@@ -63,7 +72,7 @@ fn test_update_username() {
     assert!(!client.is_available(&old_username));
 
     client.update_username(&user1, &new_username);
-    
+
     assert_eq!(client.get_username(&user1), new_username);
     assert!(client.is_available(&old_username)); // Old one should be freed
     assert!(!client.is_available(&new_username));

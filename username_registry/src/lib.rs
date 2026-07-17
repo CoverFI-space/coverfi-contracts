@@ -1,7 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, panic_with_error, Address, Env, String,
+    contract, contracterror, contractimpl, contracttype, panic_with_error, symbol_short, Address,
+    Env, String,
 };
 
 #[contract]
@@ -36,23 +37,22 @@ pub enum RegistryError {
 // Helpers
 // ---------------------------------------------------------------------------
 
-// Validate 3 to 24 chars, alphanumeric + underscore
+// Validate 3 to 24 chars, lowercase alphanumeric + underscore.
 fn is_valid_username(_env: &Env, username: &String) -> bool {
     let len = username.len() as usize;
     if len < 3 || len > 24 {
         return false;
     }
-    
+
     let mut bytes = [0u8; 24];
     username.copy_into_slice(&mut bytes[..len]);
-    
+
     for i in 0..len {
         let b = bytes[i];
         let is_lower = b >= b'a' && b <= b'z';
-        let is_upper = b >= b'A' && b <= b'Z';
         let is_digit = b >= b'0' && b <= b'9';
         let is_underscore = b == b'_';
-        if !(is_lower || is_upper || is_digit || is_underscore) {
+        if !(is_lower || is_digit || is_underscore) {
             return false;
         }
     }
@@ -79,15 +79,21 @@ impl UsernameRegistry {
         }
 
         let a2u_key = DataKey::AddressToUsername(user.clone());
-        
+
         // If they already have a username, we should remove the old mapping.
+        let mut updated_existing = false;
         if let Some(old_username) = env.storage().persistent().get::<_, String>(&a2u_key) {
             let old_u2a = DataKey::UsernameToAddress(old_username);
             env.storage().persistent().remove(&old_u2a);
+            updated_existing = true;
         }
 
         env.storage().persistent().set(&u2a_key, &user);
         env.storage().persistent().set(&a2u_key, &username);
+        env.events().publish(
+            (symbol_short!("username"), symbol_short!("set")),
+            (user, username, updated_existing),
+        );
     }
 
     /// Update username for the caller.

@@ -13,7 +13,6 @@ soroban-sdk.workspace = true
 
 [dev-dependencies]
 oracle_adapter = { path = "../oracle_adapter" }
-premium_vault = { path = "../premium_vault" }
 protected_balance_vault = { path = "../protected_balance_vault" }
 reserve_vault = { path = "../reserve_vault" }
 soroban-sdk = { workspace = true, features = ["testutils"] }

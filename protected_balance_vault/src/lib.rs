@@ -53,6 +53,7 @@ impl ProtectedBalanceVault {
         if env.storage().instance().has(&DataKey::Engine) {
             panic_with_error!(&env, ProtectedBalanceError::AlreadyInitialized);
         }
+        admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Engine, &engine);
     }

@@ -6,12 +6,17 @@ use soroban_sdk::{
     Symbol, Val, Vec,
 };
 
-const PEG_PRICE: i128 = 100_000_000;
 const BPS_DENOMINATOR: i128 = 10_000;
 const MIN_FEE_BPS: u32 = 20;
-const MAX_FEE_BPS: u32 = 100;
+const MAX_FEE_BPS: u32 = 250;
 const MIN_MAX_PAYOUT_BPS: u32 = 100;
 const MAX_MAX_PAYOUT_BPS: u32 = 5_000;
+const ONE_DAY_SECONDS: u64 = 86_400;
+const MAX_DURATION_SECONDS: u64 = 30 * ONE_DAY_SECONDS;
+const ONE_DAY_FEE_BPS: u32 = 30;
+const SEVEN_DAY_FEE_BPS: u32 = 100;
+const FOURTEEN_DAY_FEE_BPS: u32 = 150;
+const THIRTY_DAY_FEE_BPS: u32 = 250;
 
 #[contract]
 pub struct ProtectionEngine;
@@ -35,7 +40,7 @@ pub struct Position {
     pub payout_asset: Address,
     pub protected_amount: i128,
     pub fee_paid: i128,
-    pub trigger_price: i128,
+    pub entry_price: i128,
     pub start_time: u64,
     pub expiry_time: u64,
     pub status: PositionStatus,
@@ -48,11 +53,11 @@ pub struct Position {
 pub struct Config {
     pub admin: Address,
     pub protected_balance_vault: Address,
-    pub premium_vault: Address,
     pub reserve_vault: Address,
     pub oracle_adapter: Address,
     pub fee_bps: u32,
     pub max_payout_bps: u32,
+    pub max_oracle_age_seconds: u64,
     pub paused: bool,
 }
 
@@ -77,15 +82,16 @@ pub enum EngineError {
     InvalidMaxPayoutBps = 6,
     InvalidAmount = 7,
     InvalidDuration = 8,
-    InvalidTriggerPrice = 9,
+    InvalidEntryPrice = 9,
     PositionNotFound = 10,
     NotOwner = 11,
     InvalidStatus = 12,
     NotExpired = 13,
     AlreadyWithdrawn = 14,
-    PriceAboveTrigger = 15,
+    PriceNotBelowEntry = 15,
     TriggerWindowClosed = 16,
     NothingToClaim = 17,
+    StaleOraclePrice = 18,
 }
 
 fn config(env: &Env) -> Config {
@@ -170,6 +176,24 @@ fn amount_by_bps(amount: i128, bps: u32) -> i128 {
     amount * i128::from(bps) / BPS_DENOMINATOR
 }
 
+fn fee_bps_for_duration(env: &Env, duration_seconds: u64) -> u32 {
+    if duration_seconds == 0 || duration_seconds > MAX_DURATION_SECONDS {
+        panic_with_error!(env, EngineError::InvalidDuration);
+    }
+
+    if duration_seconds <= ONE_DAY_SECONDS {
+        return ONE_DAY_FEE_BPS;
+    }
+    if duration_seconds <= 7 * ONE_DAY_SECONDS {
+        return SEVEN_DAY_FEE_BPS;
+    }
+    if duration_seconds <= 14 * ONE_DAY_SECONDS {
+        return FOURTEEN_DAY_FEE_BPS;
+    }
+
+    THIRTY_DAY_FEE_BPS
+}
+
 fn invoke_unit(env: &Env, contract: &Address, name: &str, args: Vec<Val>) {
     env.invoke_contract::<()>(contract, &Symbol::new(env, name), args);
 }
@@ -178,21 +202,51 @@ fn invoke_i128(env: &Env, contract: &Address, name: &str, args: Vec<Val>) -> i12
     env.invoke_contract::<i128>(contract, &Symbol::new(env, name), args)
 }
 
+fn invoke_u64(env: &Env, contract: &Address, name: &str, args: Vec<Val>) -> u64 {
+    env.invoke_contract::<u64>(contract, &Symbol::new(env, name), args)
+}
+
+fn fresh_oracle_price(env: &Env, cfg: &Config, asset: &Address) -> i128 {
+    let price = invoke_i128(
+        env,
+        &cfg.oracle_adapter,
+        "get_price",
+        Vec::from_array(env, [asset.clone().into_val(env)]),
+    );
+    let last_updated = invoke_u64(
+        env,
+        &cfg.oracle_adapter,
+        "get_last_updated",
+        Vec::from_array(env, [asset.clone().into_val(env)]),
+    );
+    if last_updated == 0
+        || cfg.max_oracle_age_seconds == 0
+        || env.ledger().timestamp() > last_updated + cfg.max_oracle_age_seconds
+    {
+        panic_with_error!(env, EngineError::StaleOraclePrice);
+    }
+    if price <= 0 {
+        panic_with_error!(env, EngineError::InvalidEntryPrice);
+    }
+    price
+}
+
 #[contractimpl]
 impl ProtectionEngine {
     pub fn initialize(
         env: Env,
         admin: Address,
         protected_balance_vault: Address,
-        premium_vault: Address,
         reserve_vault: Address,
         oracle_adapter: Address,
         fee_bps: u32,
         max_payout_bps: u32,
+        max_oracle_age_seconds: u64,
     ) {
         if env.storage().instance().has(&DataKey::Config) {
             panic_with_error!(&env, EngineError::AlreadyInitialized);
         }
+        admin.require_auth();
         validate_fee_bps(&env, fee_bps);
         validate_max_payout_bps(&env, max_payout_bps);
 
@@ -201,11 +255,11 @@ impl ProtectionEngine {
             &Config {
                 admin,
                 protected_balance_vault,
-                premium_vault,
                 reserve_vault,
                 oracle_adapter,
                 fee_bps,
                 max_payout_bps,
+                max_oracle_age_seconds,
                 paused: false,
             },
         );
@@ -221,22 +275,20 @@ impl ProtectionEngine {
         payout_asset: Address,
         protected_amount: i128,
         duration_seconds: u64,
-        trigger_price: i128,
     ) -> u64 {
         let cfg = require_live(&env);
         user.require_auth();
         if protected_amount <= 0 {
             panic_with_error!(&env, EngineError::InvalidAmount);
         }
-        if duration_seconds == 0 {
+        if duration_seconds == 0 || duration_seconds > MAX_DURATION_SECONDS {
             panic_with_error!(&env, EngineError::InvalidDuration);
         }
-        if trigger_price <= 0 || trigger_price > PEG_PRICE {
-            panic_with_error!(&env, EngineError::InvalidTriggerPrice);
-        }
+        let entry_price = fresh_oracle_price(&env, &cfg, &protected_asset);
 
         let position_id = next_position_id(&env);
-        let fee_paid = Self::get_fee_quote(env.clone(), protected_amount);
+        let fee_paid =
+            Self::get_fee_quote_for_duration(env.clone(), protected_amount, duration_seconds);
         let max_payout = Self::get_max_payout(env.clone(), protected_amount);
         let engine = env.current_contract_address();
 
@@ -257,8 +309,8 @@ impl ProtectionEngine {
         );
         invoke_unit(
             &env,
-            &cfg.premium_vault,
-            "collect_fee_from",
+            &cfg.reserve_vault,
+            "collect_premium_from",
             Vec::from_array(
                 &env,
                 [
@@ -267,32 +319,6 @@ impl ProtectionEngine {
                     protected_asset.clone().into_val(&env),
                     fee_paid.into_val(&env),
                     position_id.into_val(&env),
-                ],
-            ),
-        );
-        invoke_unit(
-            &env,
-            &cfg.premium_vault,
-            "forward_to_reserve",
-            Vec::from_array(
-                &env,
-                [
-                    protected_asset.clone().into_val(&env),
-                    fee_paid.into_val(&env),
-                ],
-            ),
-        );
-        invoke_unit(
-            &env,
-            &cfg.reserve_vault,
-            "record_premium_deposit",
-            Vec::from_array(
-                &env,
-                [
-                    engine.clone().into_val(&env),
-                    cfg.premium_vault.clone().into_val(&env),
-                    protected_asset.clone().into_val(&env),
-                    fee_paid.into_val(&env),
                 ],
             ),
         );
@@ -320,7 +346,7 @@ impl ProtectionEngine {
             payout_asset,
             protected_amount,
             fee_paid,
-            trigger_price,
+            entry_price,
             start_time,
             expiry_time,
             status: PositionStatus::Active,
@@ -336,6 +362,7 @@ impl ProtectionEngine {
                 protected_asset,
                 protected_amount,
                 fee_paid,
+                entry_price,
                 expiry_time,
             ),
         );
@@ -352,18 +379,13 @@ impl ProtectionEngine {
             panic_with_error!(&env, EngineError::TriggerWindowClosed);
         }
 
-        let current_price = invoke_i128(
-            &env,
-            &cfg.oracle_adapter,
-            "get_price",
-            Vec::from_array(&env, [pos.protected_asset.clone().into_val(&env)]),
-        );
-        if current_price > pos.trigger_price {
-            panic_with_error!(&env, EngineError::PriceAboveTrigger);
+        let current_price = fresh_oracle_price(&env, &cfg, &pos.protected_asset);
+        if current_price >= pos.entry_price {
+            panic_with_error!(&env, EngineError::PriceNotBelowEntry);
         }
 
-        let loss = PEG_PRICE - current_price;
-        let calculated = pos.protected_amount * loss / PEG_PRICE;
+        let loss = pos.entry_price - current_price;
+        let calculated = pos.protected_amount * loss / pos.entry_price;
         if calculated <= 0 {
             panic_with_error!(&env, EngineError::NothingToClaim);
         }
@@ -503,6 +525,20 @@ impl ProtectionEngine {
         amount_by_bps(protected_amount, config(&env).fee_bps)
     }
 
+    pub fn get_fee_quote_for_duration(
+        env: Env,
+        protected_amount: i128,
+        duration_seconds: u64,
+    ) -> i128 {
+        if protected_amount <= 0 {
+            panic_with_error!(&env, EngineError::InvalidAmount);
+        }
+        amount_by_bps(
+            protected_amount,
+            fee_bps_for_duration(&env, duration_seconds),
+        )
+    }
+
     pub fn get_max_payout(env: Env, protected_amount: i128) -> i128 {
         if protected_amount <= 0 {
             panic_with_error!(&env, EngineError::InvalidAmount);
@@ -527,6 +563,16 @@ impl ProtectionEngine {
         validate_max_payout_bps(&env, max_payout_bps);
         let mut cfg = config(&env);
         cfg.max_payout_bps = max_payout_bps;
+        set_config(&env, &cfg);
+    }
+
+    pub fn set_max_oracle_age_seconds(env: Env, admin: Address, max_oracle_age_seconds: u64) {
+        require_admin(&env, &admin);
+        if max_oracle_age_seconds == 0 {
+            panic_with_error!(&env, EngineError::StaleOraclePrice);
+        }
+        let mut cfg = config(&env);
+        cfg.max_oracle_age_seconds = max_oracle_age_seconds;
         set_config(&env, &cfg);
     }
 

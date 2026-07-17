@@ -3,14 +3,10 @@ resolver = "2"
 members = [
   "protection_engine",
   "protected_balance_vault",
-  "premium_vault",
   "reserve_vault",
   "oracle_adapter",
-  "payment_receipt_registry",
   "username_registry",
-  "receipt_access_registry",
-  "dispute_registry",
-  "receipt_anchor_registry",
+  "receipt_registry",
 ]
 
 [workspace.package]

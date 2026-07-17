@@ -500,13 +500,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dispute_registry"
-version = "0.1.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
 name = "downcast-rs"
 version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1020,13 +1013,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
 
 [[package]]
-name = "payment_receipt_registry"
-version = "0.1.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
 name = "pin-project-lite"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1055,13 +1041,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
 dependencies = [
  "zerocopy",
-]
-
-[[package]]
-name = "premium_vault"
-version = "0.1.0"
-dependencies = [
- "soroban-sdk",
 ]
 
 [[package]]
@@ -1104,7 +1083,6 @@ name = "protection_engine"
 version = "0.1.0"
 dependencies = [
  "oracle_adapter",
- "premium_vault",
  "protected_balance_vault",
  "reserve_vault",
  "soroban-sdk",
@@ -1150,14 +1128,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "receipt_access_registry"
-version = "0.1.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
-name = "receipt_anchor_registry"
+name = "receipt_registry"
 version = "0.1.0"
 dependencies = [
  "soroban-sdk",
