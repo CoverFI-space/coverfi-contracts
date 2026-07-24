@@ -1,47 +1,86 @@
 #![no_std]
-#![allow(deprecated)]
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, panic_with_error, token, Address, Env,
-    Symbol, Vec,
+    Symbol,
 };
 
-const BPS_DENOMINATOR: i128 = 10_000;
-const DEFAULT_FLOOR_BPS: u32 = 2_000;
-const DEFAULT_DRAIN_BPS: u32 = 5_000;
+const BPS: i128 = 10_000;
+const UNDERWRITER_BPS: i128 = 7_800;
+const DEFAULT_PROTOCOL_BPS: i128 = 1_200;
+const MIN_PROTOCOL_BPS: i128 = 1_000;
+const MAX_PROTOCOL_BPS: i128 = 1_500;
+const SAFETY_BPS: i128 = 700;
+const PARTNER_BPS: i128 = 2_000;
+const MAX_UTILIZATION_BPS: i128 = 9_000;
+const MAX_CONCENTRATION_BPS: i128 = 7_500;
+const WITHDRAW_DELAY: u64 = 7 * 86_400;
+const INSTANCE_TTL_THRESHOLD: u32 = 30 * 17_280;
+const INSTANCE_TTL_EXTEND_TO: u32 = 120 * 17_280;
 
 #[contract]
 pub struct ReserveVault;
 
 #[contracttype]
-#[derive(Clone)]
-enum DataKey {
-    Admin,
-    Engine,
-    FloorBps,
-    DrainBps,
-    CurrentEpoch,
-    TotalReserve(Address),
-    LockedReserve(Address),
-    ReservedReserve(Address),
-    PositionLock(u64),
-    PositionToken(u64),
-    Claim(u64),
-    UserClaims(Address),
-    EpochTotal(u64, Address),
-    EpochAllocated(u64, Address),
-    TotalPremiums(Address),
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PoolState {
+    pub token: Address,
+    pub total_assets: i128,
+    pub total_shares: i128,
+    pub locked_liabilities: i128,
+    pub reserved_claims: i128,
+    pub unearned_premiums: i128,
+    pub safety_balance: i128,
+    pub automation_balance: i128,
+    pub cumulative_protocol_revenue: i128,
+    pub cumulative_underwriting: i128,
+    pub cumulative_claims: i128,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct WithdrawalRequest {
+    pub id: u64,
+    pub owner: Address,
+    pub token: Address,
+    pub shares: i128,
+    pub executable_at: u64,
+    pub completed: bool,
+    pub cancelled: bool,
 }
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ClaimRecord {
-    pub id: u64,
+    pub position_id: u64,
     pub owner: Address,
     pub token: Address,
-    pub approved_amount: i128,
-    pub withdrawn_amount: i128,
-    pub epoch_id: u64,
+    pub amount: i128,
+    pub withdrawn: bool,
+}
+
+#[contracttype]
+#[derive(Clone)]
+enum DataKey {
+    Admin,
+    PendingAdmin,
+    Engine,
+    Oracle,
+    Treasury,
+    NextWithdrawalId,
+    Pool(Address),
+    Shares(Address, Address),
+    QueuedShares(Address, Address),
+    Withdrawal(u64),
+    PositionLock(u64),
+    PositionToken(u64),
+    PositionMarket(u64),
+    MarketLocked(Address, Address),
+    PositionUnearned(u64),
+    Claim(u64),
+    PartnerApproved(Address),
+    ProtocolFeeBps,
+    RewardPaid(Symbol, u64),
 }
 
 #[contracterror]
@@ -50,192 +89,252 @@ pub struct ClaimRecord {
 pub enum ReserveError {
     AlreadyInitialized = 1,
     NotInitialized = 2,
-    NotEngine = 3,
+    NotAuthorized = 3,
     InvalidAmount = 4,
-    InsufficientAvailableReserve = 5,
-    InsufficientLockedReserve = 6,
-    TokenMismatch = 7,
-    AccountingBalanceTooLow = 8,
-    NotAdmin = 9,
-    InvalidBps = 10,
-    ClaimNotFound = 11,
-    NotOwner = 12,
-    NothingToWithdraw = 13,
+    InsufficientLiquidity = 5,
+    InsufficientShares = 6,
+    Slippage = 7,
+    RequestNotReady = 8,
+    RequestClosed = 9,
+    NotOwner = 10,
+    TokenMismatch = 11,
+    PositionNotLocked = 12,
+    ClaimNotFound = 13,
+    AlreadyWithdrawn = 14,
+    RewardAlreadyPaid = 15,
+    UnsafeUtilization = 16,
+    ConcentrationLimit = 17,
+    PositionAlreadyLocked = 18,
+    InvalidProtocolFee = 19,
 }
 
-fn configured_engine(env: &Env) -> Address {
+fn read_address(env: &Env, key: DataKey) -> Address {
     env.storage()
         .instance()
-        .get(&DataKey::Engine)
+        .get(&key)
         .unwrap_or_else(|| panic_with_error!(env, ReserveError::NotInitialized))
-}
-
-fn require_engine(env: &Env, caller: &Address) {
-    caller.require_auth();
-    if *caller != configured_engine(env) {
-        panic_with_error!(env, ReserveError::NotEngine);
-    }
 }
 
 fn admin(env: &Env) -> Address {
-    env.storage()
-        .instance()
-        .get(&DataKey::Admin)
-        .unwrap_or_else(|| panic_with_error!(env, ReserveError::NotInitialized))
+    read_address(env, DataKey::Admin)
 }
 
 fn require_admin(env: &Env, caller: &Address) {
     caller.require_auth();
     if *caller != admin(env) {
-        panic_with_error!(env, ReserveError::NotAdmin);
+        panic_with_error!(env, ReserveError::NotAuthorized);
     }
 }
 
-fn read_i128(env: &Env, key: &DataKey) -> i128 {
-    env.storage().persistent().get(key).unwrap_or(0)
+fn require_engine(env: &Env, caller: &Address) {
+    if *caller != read_address(env, DataKey::Engine) {
+        panic_with_error!(env, ReserveError::NotAuthorized);
+    }
 }
 
-fn read_u64(env: &Env, key: &DataKey) -> u64 {
-    env.storage().instance().get(key).unwrap_or(0)
+fn require_reward_caller(env: &Env, caller: &Address) {
+    let engine = read_address(env, DataKey::Engine);
+    let oracle = read_address(env, DataKey::Oracle);
+    if *caller != engine && *caller != oracle {
+        panic_with_error!(env, ReserveError::NotAuthorized);
+    }
 }
 
-fn current_epoch(env: &Env) -> u64 {
-    read_u64(env, &DataKey::CurrentEpoch)
+fn empty_pool(token: Address) -> PoolState {
+    PoolState {
+        token,
+        total_assets: 0,
+        total_shares: 0,
+        locked_liabilities: 0,
+        reserved_claims: 0,
+        unearned_premiums: 0,
+        safety_balance: 0,
+        automation_balance: 0,
+        cumulative_protocol_revenue: 0,
+        cumulative_underwriting: 0,
+        cumulative_claims: 0,
+    }
 }
 
-fn floor_bps(env: &Env) -> u32 {
+fn pool(env: &Env, token: &Address) -> PoolState {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Pool(token.clone()))
+        .unwrap_or_else(|| empty_pool(token.clone()))
+}
+
+fn set_pool(env: &Env, state: &PoolState) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::Pool(state.token.clone()), state);
+}
+
+fn read_amount(env: &Env, key: DataKey) -> i128 {
+    env.storage().persistent().get(&key).unwrap_or(0_i128)
+}
+
+fn provider_nav(state: &PoolState) -> i128 {
+    state.total_assets
+        - state.safety_balance
+        - state.automation_balance
+        - state.unearned_premiums
+        - state.reserved_claims
+}
+
+fn liquid_assets(state: &PoolState) -> i128 {
+    state.total_assets
+        - state.locked_liabilities
+        - state.reserved_claims
+        - state.safety_balance
+        - state.automation_balance
+        - state.unearned_premiums
+}
+
+fn checked_positive(env: &Env, amount: i128) {
+    if amount <= 0 {
+        panic_with_error!(env, ReserveError::InvalidAmount);
+    }
+}
+
+fn protocol_fee_bps(env: &Env) -> i128 {
     env.storage()
         .instance()
-        .get(&DataKey::FloorBps)
-        .unwrap_or(DEFAULT_FLOOR_BPS)
+        .get(&DataKey::ProtocolFeeBps)
+        .unwrap_or(DEFAULT_PROTOCOL_BPS)
 }
 
-fn drain_bps(env: &Env) -> u32 {
-    env.storage()
-        .instance()
-        .get(&DataKey::DrainBps)
-        .unwrap_or(DEFAULT_DRAIN_BPS)
-}
-
-fn amount_by_bps(amount: i128, bps: u32) -> i128 {
-    amount * i128::from(bps) / BPS_DENOMINATOR
-}
-
-fn allocation_budget(env: &Env, token: Address, requested_amount: i128) -> i128 {
-    if requested_amount <= 0 {
-        return 0;
+fn validate_protocol_fee_bps(env: &Env, value: i128) {
+    if !(MIN_PROTOCOL_BPS..=MAX_PROTOCOL_BPS).contains(&value)
+        || UNDERWRITER_BPS + SAFETY_BPS + value > BPS
+    {
+        panic_with_error!(env, ReserveError::InvalidProtocolFee);
     }
-
-    let total_reserve = ReserveVault::get_total_reserve(env.clone(), token.clone());
-    let locked_reserve = ReserveVault::get_locked_reserve(env.clone(), token.clone());
-    let reserved_reserve = ReserveVault::get_reserved_reserve(env.clone(), token.clone());
-    let free_liquidity = total_reserve - locked_reserve - reserved_reserve;
-    let floor = amount_by_bps(total_reserve, floor_bps(env));
-    let surplus = if free_liquidity > floor {
-        free_liquidity - floor
-    } else {
-        0
-    };
-    let drain_budget = amount_by_bps(surplus, drain_bps(env));
-
-    if requested_amount < drain_budget {
-        requested_amount
-    } else {
-        drain_budget
-    }
-}
-
-fn allocate_epoch_budget(env: &Env, epoch_id: u64, token: Address) -> i128 {
-    let total_key = DataKey::EpochTotal(epoch_id, token.clone());
-    let allocated_key = DataKey::EpochAllocated(epoch_id, token.clone());
-    let epoch_total = read_i128(env, &total_key);
-    let epoch_allocated = read_i128(env, &allocated_key);
-    let unpaid_epoch_total = epoch_total - epoch_allocated;
-    let budget = allocation_budget(env, token.clone(), unpaid_epoch_total);
-
-    if budget <= 0 {
-        return 0;
-    }
-
-    env.storage()
-        .persistent()
-        .set(&allocated_key, &(epoch_allocated + budget));
-    let reserved_key = DataKey::ReservedReserve(token);
-    env.storage()
-        .persistent()
-        .set(&reserved_key, &(read_i128(env, &reserved_key) + budget));
-    budget
-}
-
-fn claim(env: &Env, claim_id: u64) -> ClaimRecord {
-    env.storage()
-        .persistent()
-        .get(&DataKey::Claim(claim_id))
-        .unwrap_or_else(|| panic_with_error!(env, ReserveError::ClaimNotFound))
-}
-
-fn set_claim(env: &Env, record: &ClaimRecord) {
-    env.storage()
-        .persistent()
-        .set(&DataKey::Claim(record.id), record);
-}
-
-fn user_claims(env: &Env, user: &Address) -> Vec<u64> {
-    env.storage()
-        .persistent()
-        .get(&DataKey::UserClaims(user.clone()))
-        .unwrap_or_else(|| Vec::new(env))
-}
-
-fn save_user_claim(env: &Env, user: &Address, claim_id: u64) {
-    let mut ids = user_claims(env, user);
-    ids.push_back(claim_id);
-    env.storage()
-        .persistent()
-        .set(&DataKey::UserClaims(user.clone()), &ids);
 }
 
 #[contractimpl]
 impl ReserveVault {
-    pub fn initialize(env: Env, admin: Address, engine: Address) {
-        if env.storage().instance().has(&DataKey::Engine) {
+    pub fn initialize(env: Env, admin: Address, treasury: Address) {
+        if env.storage().instance().has(&DataKey::Admin) {
             panic_with_error!(&env, ReserveError::AlreadyInitialized);
         }
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
-        env.storage().instance().set(&DataKey::Engine, &engine);
+        env.storage().instance().set(&DataKey::Treasury, &treasury);
         env.storage()
             .instance()
-            .set(&DataKey::FloorBps, &DEFAULT_FLOOR_BPS);
+            .set(&DataKey::ProtocolFeeBps, &DEFAULT_PROTOCOL_BPS);
         env.storage()
             .instance()
-            .set(&DataKey::DrainBps, &DEFAULT_DRAIN_BPS);
-        env.storage().instance().set(&DataKey::CurrentEpoch, &1_u64);
+            .set(&DataKey::NextWithdrawalId, &1_u64);
     }
 
-    pub fn deposit_reserve(env: Env, funder: Address, token: Address, amount: i128) {
-        funder.require_auth();
-        if amount <= 0 {
-            panic_with_error!(&env, ReserveError::InvalidAmount);
-        }
+    pub fn configure_protocol(env: Env, admin: Address, engine: Address, oracle: Address) {
+        require_admin(&env, &admin);
+        env.storage().instance().set(&DataKey::Engine, &engine);
+        env.storage().instance().set(&DataKey::Oracle, &oracle);
+    }
 
+    pub fn propose_admin(env: Env, admin: Address, pending_admin: Address) {
+        require_admin(&env, &admin);
+        env.storage()
+            .instance()
+            .set(&DataKey::PendingAdmin, &pending_admin);
+    }
+
+    pub fn accept_admin(env: Env, pending_admin: Address) {
+        pending_admin.require_auth();
+        let expected: Address = read_address(&env, DataKey::PendingAdmin);
+        if pending_admin != expected {
+            panic_with_error!(&env, ReserveError::NotAuthorized);
+        }
+        env.storage()
+            .instance()
+            .set(&DataKey::Admin, &pending_admin);
+        env.storage().instance().remove(&DataKey::PendingAdmin);
+    }
+
+    pub fn set_partner(env: Env, admin: Address, partner: Address, approved: bool) {
+        require_admin(&env, &admin);
+        env.storage()
+            .persistent()
+            .set(&DataKey::PartnerApproved(partner), &approved);
+    }
+
+    pub fn set_treasury(env: Env, admin: Address, treasury: Address) {
+        require_admin(&env, &admin);
+        env.storage().instance().set(&DataKey::Treasury, &treasury);
+        env.events()
+            .publish((Symbol::new(&env, "treasury_set"),), treasury);
+    }
+
+    pub fn get_treasury(env: Env) -> Address {
+        read_address(&env, DataKey::Treasury)
+    }
+
+    pub fn set_protocol_fee_bps(env: Env, admin: Address, fee_bps: i128) {
+        require_admin(&env, &admin);
+        validate_protocol_fee_bps(&env, fee_bps);
+        env.storage()
+            .instance()
+            .set(&DataKey::ProtocolFeeBps, &fee_bps);
+        env.events()
+            .publish((Symbol::new(&env, "protocol_fee_set"),), fee_bps);
+    }
+
+    pub fn get_protocol_fee_bps(env: Env) -> i128 {
+        protocol_fee_bps(&env)
+    }
+
+    pub fn deposit_reserve(
+        env: Env,
+        provider: Address,
+        token: Address,
+        amount: i128,
+        min_shares: i128,
+    ) -> i128 {
+        provider.require_auth();
+        checked_positive(&env, amount);
+        let mut state = pool(&env, &token);
+        let nav = provider_nav(&state);
+        let shares = if state.total_shares == 0 || nav <= 0 {
+            amount
+        } else {
+            amount * state.total_shares / nav
+        };
+        if shares <= 0 || shares < min_shares {
+            panic_with_error!(&env, ReserveError::Slippage);
+        }
+        token::Client::new(&env, &token).transfer(
+            &provider,
+            &env.current_contract_address(),
+            &amount,
+        );
+        state.total_assets += amount;
+        state.total_shares += shares;
+        set_pool(&env, &state);
+        let key = DataKey::Shares(provider.clone(), token.clone());
+        env.storage()
+            .persistent()
+            .set(&key, &(read_amount(&env, key.clone()) + shares));
+        env.events().publish(
+            (Symbol::new(&env, "reserve_deposited"), provider),
+            (token, amount, shares),
+        );
+        shares
+    }
+
+    pub fn fund_automation(env: Env, funder: Address, token: Address, amount: i128) {
+        funder.require_auth();
+        checked_positive(&env, amount);
         token::Client::new(&env, &token).transfer(
             &funder,
             &env.current_contract_address(),
             &amount,
         );
-        let key = DataKey::TotalReserve(token.clone());
-        let next_total = read_i128(&env, &key) + amount;
-        let actual_balance =
-            token::Client::new(&env, &token).balance(&env.current_contract_address());
-        if actual_balance < next_total {
-            panic_with_error!(&env, ReserveError::AccountingBalanceTooLow);
-        }
-        env.storage().persistent().set(&key, &next_total);
-        env.events().publish(
-            (Symbol::new(&env, "reserve_deposited"), funder),
-            (token, amount),
-        );
+        let mut state = pool(&env, &token);
+        state.total_assets += amount;
+        state.automation_balance += amount;
+        set_pool(&env, &state);
     }
 
     pub fn collect_premium_from(
@@ -243,320 +342,433 @@ impl ReserveVault {
         engine: Address,
         user: Address,
         token: Address,
-        amount: i128,
+        risk_premium: i128,
+        automation_fee: i128,
         position_id: u64,
+        partner: Option<Address>,
     ) {
         require_engine(&env, &engine);
-        if amount <= 0 {
+        checked_positive(&env, risk_premium);
+        if automation_fee < 0 {
             panic_with_error!(&env, ReserveError::InvalidAmount);
         }
+        let total = risk_premium + automation_fee;
+        token::Client::new(&env, &token).transfer(&user, &env.current_contract_address(), &total);
 
-        token::Client::new(&env, &token).transfer(&user, &env.current_contract_address(), &amount);
-
-        let total_key = DataKey::TotalReserve(token.clone());
-        let premium_key = DataKey::TotalPremiums(token.clone());
-        let next_total = read_i128(&env, &total_key) + amount;
-        let actual_balance =
-            token::Client::new(&env, &token).balance(&env.current_contract_address());
-        if actual_balance < next_total {
-            panic_with_error!(&env, ReserveError::AccountingBalanceTooLow);
+        let underwriting = risk_premium * UNDERWRITER_BPS / BPS;
+        let protocol_bps = protocol_fee_bps(&env);
+        validate_protocol_fee_bps(&env, protocol_bps);
+        let mut protocol = risk_premium * protocol_bps / BPS;
+        let safety = risk_premium * SAFETY_BPS / BPS;
+        let automation = risk_premium - underwriting - protocol - safety + automation_fee;
+        let mut partner_amount = 0_i128;
+        if let Some(partner_address) = partner {
+            let approved: bool = env
+                .storage()
+                .persistent()
+                .get(&DataKey::PartnerApproved(partner_address.clone()))
+                .unwrap_or(false);
+            if approved {
+                partner_amount = protocol * PARTNER_BPS / BPS;
+                token::Client::new(&env, &token).transfer(
+                    &env.current_contract_address(),
+                    &partner_address,
+                    &partner_amount,
+                );
+                protocol -= partner_amount;
+            }
         }
+        let treasury = read_address(&env, DataKey::Treasury);
+        token::Client::new(&env, &token).transfer(
+            &env.current_contract_address(),
+            &treasury,
+            &protocol,
+        );
 
-        env.storage().persistent().set(&total_key, &next_total);
+        let mut state = pool(&env, &token);
+        state.total_assets += underwriting + safety + automation;
+        state.unearned_premiums += underwriting;
+        state.safety_balance += safety;
+        state.automation_balance += automation;
+        state.cumulative_protocol_revenue += protocol + partner_amount;
+        state.cumulative_underwriting += underwriting;
+        set_pool(&env, &state);
         env.storage()
             .persistent()
-            .set(&premium_key, &(read_i128(&env, &premium_key) + amount));
+            .set(&DataKey::PositionUnearned(position_id), &underwriting);
         env.events().publish(
-            (Symbol::new(&env, "premium_collected"), position_id),
-            (user, token, amount),
+            (Symbol::new(&env, "premium_routed"), position_id),
+            (underwriting, protocol, partner_amount, safety, automation),
         );
     }
 
     pub fn lock_payout_capacity(
         env: Env,
         engine: Address,
-        token: Address,
+        protected_asset: Address,
+        payout_token: Address,
         position_id: u64,
         amount: i128,
     ) {
         require_engine(&env, &engine);
-        if amount <= 0 {
-            panic_with_error!(&env, ReserveError::InvalidAmount);
+        checked_positive(&env, amount);
+        if read_amount(&env, DataKey::PositionLock(position_id)) != 0 {
+            panic_with_error!(&env, ReserveError::PositionAlreadyLocked);
         }
-        let available = Self::get_available_reserve(env.clone(), token.clone());
-        if available < amount {
-            panic_with_error!(&env, ReserveError::InsufficientAvailableReserve);
+        let mut state = pool(&env, &payout_token);
+        if liquid_assets(&state) < amount {
+            panic_with_error!(&env, ReserveError::InsufficientLiquidity);
         }
-
-        let locked_key = DataKey::LockedReserve(token.clone());
-        env.storage()
-            .persistent()
-            .set(&locked_key, &(read_i128(&env, &locked_key) + amount));
+        let nav = provider_nav(&state);
+        if nav <= 0 || (state.locked_liabilities + amount) * BPS / nav >= MAX_UTILIZATION_BPS {
+            panic_with_error!(&env, ReserveError::UnsafeUtilization);
+        }
+        let market_key = DataKey::MarketLocked(protected_asset.clone(), payout_token.clone());
+        let projected_market = read_amount(&env, market_key.clone()) + amount;
+        if projected_market * BPS / nav > MAX_CONCENTRATION_BPS {
+            panic_with_error!(&env, ReserveError::ConcentrationLimit);
+        }
+        state.locked_liabilities += amount;
+        set_pool(&env, &state);
         env.storage()
             .persistent()
             .set(&DataKey::PositionLock(position_id), &amount);
         env.storage()
             .persistent()
-            .set(&DataKey::PositionToken(position_id), &token);
-        env.events().publish(
-            (Symbol::new(&env, "payout_capacity_locked"), position_id),
-            amount,
-        );
-    }
-
-    pub fn record_premium_deposit(
-        env: Env,
-        engine: Address,
-        funder: Address,
-        token: Address,
-        amount: i128,
-    ) {
-        require_engine(&env, &engine);
-        if amount <= 0 {
-            panic_with_error!(&env, ReserveError::InvalidAmount);
-        }
-
-        let key = DataKey::TotalReserve(token.clone());
+            .set(&DataKey::PositionToken(position_id), &payout_token);
         env.storage()
             .persistent()
-            .set(&key, &(read_i128(&env, &key) + amount));
-        env.events().publish(
-            (Symbol::new(&env, "reserve_deposited"), funder),
-            (token, amount),
-        );
-    }
-
-    pub fn release_payout_capacity(env: Env, engine: Address, token: Address, position_id: u64) {
-        require_engine(&env, &engine);
-        let stored_token: Address = env
-            .storage()
-            .persistent()
-            .get(&DataKey::PositionToken(position_id))
-            .unwrap_or_else(|| panic_with_error!(&env, ReserveError::InsufficientLockedReserve));
-        if stored_token != token {
-            panic_with_error!(&env, ReserveError::TokenMismatch);
-        }
-        let locked_for_position = read_i128(&env, &DataKey::PositionLock(position_id));
-        if locked_for_position <= 0 {
-            return;
-        }
-
-        let locked_key = DataKey::LockedReserve(token);
+            .set(&DataKey::PositionMarket(position_id), &protected_asset);
         env.storage().persistent().set(
-            &locked_key,
-            &(read_i128(&env, &locked_key) - locked_for_position),
-        );
-        env.storage()
-            .persistent()
-            .set(&DataKey::PositionLock(position_id), &0_i128);
-        env.events().publish(
-            (Symbol::new(&env, "payout_capacity_released"), position_id),
-            locked_for_position,
+            &market_key,
+            &(read_amount(&env, market_key.clone()) + amount),
         );
     }
 
-    pub fn pay_claim(
+    pub fn settle_position(
         env: Env,
         engine: Address,
-        token: Address,
-        user: Address,
+        owner: Address,
         position_id: u64,
-        payout_amount: i128,
+        payout: i128,
     ) {
         require_engine(&env, &engine);
-        if payout_amount <= 0 {
+        if payout < 0 {
             panic_with_error!(&env, ReserveError::InvalidAmount);
         }
-        let locked_for_position = read_i128(&env, &DataKey::PositionLock(position_id));
-        if locked_for_position < payout_amount {
-            panic_with_error!(&env, ReserveError::InsufficientLockedReserve);
+        let lock = read_amount(&env, DataKey::PositionLock(position_id));
+        if lock <= 0 || payout > lock {
+            panic_with_error!(&env, ReserveError::PositionNotLocked);
         }
-        let stored_token: Address = env
+        let token: Address = env
             .storage()
             .persistent()
             .get(&DataKey::PositionToken(position_id))
-            .unwrap_or_else(|| panic_with_error!(&env, ReserveError::InsufficientLockedReserve));
-        if stored_token != token {
-            panic_with_error!(&env, ReserveError::TokenMismatch);
-        }
-
-        let locked_key = DataKey::LockedReserve(token);
-        env.storage().persistent().set(
-            &locked_key,
-            &(read_i128(&env, &locked_key) - locked_for_position),
-        );
+            .unwrap_or_else(|| panic_with_error!(&env, ReserveError::PositionNotLocked));
+        let market: Address = env
+            .storage()
+            .persistent()
+            .get(&DataKey::PositionMarket(position_id))
+            .unwrap_or_else(|| panic_with_error!(&env, ReserveError::PositionNotLocked));
+        let mut state = pool(&env, &token);
+        state.locked_liabilities -= lock;
+        state.reserved_claims += payout;
+        let unearned = read_amount(&env, DataKey::PositionUnearned(position_id));
+        state.unearned_premiums -= unearned;
+        state.cumulative_claims += payout;
+        set_pool(&env, &state);
+        let market_key = DataKey::MarketLocked(market, token.clone());
+        env.storage()
+            .persistent()
+            .set(&market_key, &(read_amount(&env, market_key.clone()) - lock));
         env.storage()
             .persistent()
             .set(&DataKey::PositionLock(position_id), &0_i128);
-
-        let epoch_id = current_epoch(&env);
-        let claim_record = ClaimRecord {
-            id: position_id,
-            owner: user.clone(),
-            token: stored_token.clone(),
-            approved_amount: payout_amount,
-            withdrawn_amount: 0,
-            epoch_id,
-        };
-        set_claim(&env, &claim_record);
-        save_user_claim(&env, &user, position_id);
-
-        let epoch_key = DataKey::EpochTotal(epoch_id, stored_token);
         env.storage()
             .persistent()
-            .set(&epoch_key, &(read_i128(&env, &epoch_key) + payout_amount));
-        env.events().publish(
-            (Symbol::new(&env, "claim_approved"), position_id),
-            (user, payout_amount),
-        );
+            .set(&DataKey::PositionUnearned(position_id), &0_i128);
+        if payout > 0 {
+            env.storage().persistent().set(
+                &DataKey::Claim(position_id),
+                &ClaimRecord {
+                    position_id,
+                    owner,
+                    token,
+                    amount: payout,
+                    withdrawn: false,
+                },
+            );
+        }
     }
 
-    pub fn close_epoch(env: Env, admin: Address, token: Address) -> i128 {
-        require_admin(&env, &admin);
-        let epoch_id = current_epoch(&env);
-        let budget = allocate_epoch_budget(&env, epoch_id, token.clone());
-        env.storage()
-            .instance()
-            .set(&DataKey::CurrentEpoch, &(epoch_id + 1));
-        env.events().publish(
-            (Symbol::new(&env, "epoch_closed"), epoch_id),
-            (token, budget, floor_bps(&env), drain_bps(&env)),
-        );
-        budget
-    }
-
-    pub fn allocate_epoch(env: Env, admin: Address, epoch_id: u64, token: Address) -> i128 {
-        require_admin(&env, &admin);
-        let budget = allocate_epoch_budget(&env, epoch_id, token.clone());
-        env.events().publish(
-            (Symbol::new(&env, "epoch_allocated"), epoch_id),
-            (token, budget, floor_bps(&env), drain_bps(&env)),
-        );
-        budget
-    }
-
-    pub fn withdraw_reserved(env: Env, user: Address, claim_id: u64) -> i128 {
-        user.require_auth();
-        let mut record = claim(&env, claim_id);
-        if record.owner != user {
+    pub fn claim_payout(env: Env, engine: Address, owner: Address, position_id: u64) -> i128 {
+        require_engine(&env, &engine);
+        let mut claim: ClaimRecord = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Claim(position_id))
+            .unwrap_or_else(|| panic_with_error!(&env, ReserveError::ClaimNotFound));
+        if claim.owner != owner {
             panic_with_error!(&env, ReserveError::NotOwner);
         }
-        let claimable = Self::quote_withdraw(env.clone(), claim_id);
-        if claimable <= 0 {
-            panic_with_error!(&env, ReserveError::NothingToWithdraw);
+        if claim.withdrawn {
+            panic_with_error!(&env, ReserveError::AlreadyWithdrawn);
         }
-
-        token::Client::new(&env, &record.token).transfer(
+        claim.withdrawn = true;
+        env.storage()
+            .persistent()
+            .set(&DataKey::Claim(position_id), &claim);
+        let mut state = pool(&env, &claim.token);
+        state.total_assets -= claim.amount;
+        state.reserved_claims -= claim.amount;
+        set_pool(&env, &state);
+        token::Client::new(&env, &claim.token).transfer(
             &env.current_contract_address(),
-            &user,
-            &claimable,
+            &owner,
+            &claim.amount,
         );
-        record.withdrawn_amount += claimable;
-        set_claim(&env, &record);
+        claim.amount
+    }
 
-        let total_key = DataKey::TotalReserve(record.token.clone());
-        let reserved_key = DataKey::ReservedReserve(record.token.clone());
+    pub fn pay_keeper(
+        env: Env,
+        caller: Address,
+        token: Address,
+        keeper: Address,
+        action: Symbol,
+        action_id: u64,
+        amount: i128,
+    ) -> bool {
+        require_reward_caller(&env, &caller);
+        checked_positive(&env, amount);
+        let reward_key = DataKey::RewardPaid(action.clone(), action_id);
+        if env.storage().persistent().has(&reward_key) {
+            panic_with_error!(&env, ReserveError::RewardAlreadyPaid);
+        }
+        let mut state = pool(&env, &token);
+        if state.automation_balance < amount {
+            return false;
+        }
+        state.automation_balance -= amount;
+        state.total_assets -= amount;
+        set_pool(&env, &state);
+        env.storage().persistent().set(&reward_key, &true);
+        token::Client::new(&env, &token).transfer(
+            &env.current_contract_address(),
+            &keeper,
+            &amount,
+        );
+        true
+    }
+
+    pub fn request_withdraw(env: Env, provider: Address, token: Address, shares: i128) -> u64 {
+        provider.require_auth();
+        checked_positive(&env, shares);
+        let share_key = DataKey::Shares(provider.clone(), token.clone());
+        let queued_key = DataKey::QueuedShares(provider.clone(), token.clone());
+        let owned = read_amount(&env, share_key);
+        let queued = read_amount(&env, queued_key.clone());
+        if owned - queued < shares {
+            panic_with_error!(&env, ReserveError::InsufficientShares);
+        }
         env.storage()
             .persistent()
-            .set(&total_key, &(read_i128(&env, &total_key) - claimable));
+            .set(&queued_key, &(queued + shares));
+        let id: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::NextWithdrawalId)
+            .unwrap_or(1);
+        env.storage()
+            .instance()
+            .set(&DataKey::NextWithdrawalId, &(id + 1));
+        env.storage().persistent().set(
+            &DataKey::Withdrawal(id),
+            &WithdrawalRequest {
+                id,
+                owner: provider,
+                token,
+                shares,
+                executable_at: env.ledger().timestamp() + WITHDRAW_DELAY,
+                completed: false,
+                cancelled: false,
+            },
+        );
+        id
+    }
+
+    pub fn cancel_withdraw(env: Env, provider: Address, request_id: u64) {
+        provider.require_auth();
+        let mut request = Self::get_withdrawal(env.clone(), request_id);
+        if request.owner != provider {
+            panic_with_error!(&env, ReserveError::NotOwner);
+        }
+        if request.completed || request.cancelled {
+            panic_with_error!(&env, ReserveError::RequestClosed);
+        }
+        request.cancelled = true;
         env.storage()
             .persistent()
-            .set(&reserved_key, &(read_i128(&env, &reserved_key) - claimable));
-        env.events().publish(
-            (Symbol::new(&env, "reserved_withdrawn"), claim_id),
-            (user, claimable),
+            .set(&DataKey::Withdrawal(request_id), &request);
+        let key = DataKey::QueuedShares(provider, request.token);
+        env.storage()
+            .persistent()
+            .set(&key, &(read_amount(&env, key.clone()) - request.shares));
+    }
+
+    pub fn execute_withdraw(
+        env: Env,
+        provider: Address,
+        request_id: u64,
+        min_amount: i128,
+    ) -> i128 {
+        provider.require_auth();
+        let mut request = Self::get_withdrawal(env.clone(), request_id);
+        if request.owner != provider {
+            panic_with_error!(&env, ReserveError::NotOwner);
+        }
+        if request.completed || request.cancelled {
+            panic_with_error!(&env, ReserveError::RequestClosed);
+        }
+        if env.ledger().timestamp() < request.executable_at {
+            panic_with_error!(&env, ReserveError::RequestNotReady);
+        }
+        let mut state = pool(&env, &request.token);
+        let nav = provider_nav(&state);
+        let amount = request.shares * nav / state.total_shares;
+        if amount < min_amount {
+            panic_with_error!(&env, ReserveError::Slippage);
+        }
+        if amount <= 0 || amount > liquid_assets(&state) {
+            panic_with_error!(&env, ReserveError::InsufficientLiquidity);
+        }
+        let share_key = DataKey::Shares(provider.clone(), request.token.clone());
+        let queued_key = DataKey::QueuedShares(provider.clone(), request.token.clone());
+        state.total_assets -= amount;
+        state.total_shares -= request.shares;
+        set_pool(&env, &state);
+        env.storage().persistent().set(
+            &share_key,
+            &(read_amount(&env, share_key.clone()) - request.shares),
         );
-        claimable
+        env.storage().persistent().set(
+            &queued_key,
+            &(read_amount(&env, queued_key.clone()) - request.shares),
+        );
+        request.completed = true;
+        env.storage()
+            .persistent()
+            .set(&DataKey::Withdrawal(request_id), &request);
+        token::Client::new(&env, &request.token).transfer(
+            &env.current_contract_address(),
+            &provider,
+            &amount,
+        );
+        amount
     }
 
-    pub fn get_total_reserve(env: Env, token: Address) -> i128 {
-        read_i128(&env, &DataKey::TotalReserve(token))
+    pub fn get_pool(env: Env, token: Address) -> PoolState {
+        pool(&env, &token)
     }
 
-    pub fn get_locked_reserve(env: Env, token: Address) -> i128 {
-        read_i128(&env, &DataKey::LockedReserve(token))
+    pub fn get_provider_shares(env: Env, provider: Address, token: Address) -> i128 {
+        read_amount(&env, DataKey::Shares(provider, token))
     }
 
-    pub fn get_reserved_reserve(env: Env, token: Address) -> i128 {
-        read_i128(&env, &DataKey::ReservedReserve(token))
+    pub fn get_available_liquidity(env: Env, token: Address) -> i128 {
+        liquid_assets(&pool(&env, &token))
     }
 
-    pub fn get_total_premiums(env: Env, token: Address) -> i128 {
-        read_i128(&env, &DataKey::TotalPremiums(token))
+    pub fn get_utilization_bps(env: Env, token: Address) -> u32 {
+        let state = pool(&env, &token);
+        let usable = provider_nav(&state);
+        if usable <= 0 {
+            return 10_000;
+        }
+        ((state.locked_liabilities * BPS / usable).min(BPS)) as u32
     }
 
-    pub fn get_available_reserve(env: Env, token: Address) -> i128 {
-        Self::get_total_reserve(env.clone(), token.clone())
-            - Self::get_locked_reserve(env.clone(), token.clone())
-            - Self::get_reserved_reserve(env, token)
+    pub fn get_projected_utilization_bps(env: Env, token: Address, additional: i128) -> u32 {
+        if additional < 0 {
+            panic_with_error!(&env, ReserveError::InvalidAmount);
+        }
+        let state = pool(&env, &token);
+        let usable = provider_nav(&state);
+        if usable <= 0 {
+            return 10_000;
+        }
+        (((state.locked_liabilities + additional) * BPS / usable).min(BPS)) as u32
+    }
+
+    pub fn get_market_concentration_bps(
+        env: Env,
+        protected_asset: Address,
+        payout_token: Address,
+    ) -> u32 {
+        let state = pool(&env, &payout_token);
+        let usable = provider_nav(&state);
+        if usable <= 0 {
+            return 0;
+        }
+        let market = read_amount(&env, DataKey::MarketLocked(protected_asset, payout_token));
+        ((market * BPS / usable).min(BPS)) as u32
+    }
+
+    pub fn get_projected_concentration_bps(
+        env: Env,
+        protected_asset: Address,
+        payout_token: Address,
+        additional: i128,
+    ) -> u32 {
+        if additional < 0 {
+            panic_with_error!(&env, ReserveError::InvalidAmount);
+        }
+        let state = pool(&env, &payout_token);
+        let usable = provider_nav(&state);
+        if usable <= 0 {
+            return 10_000;
+        }
+        let market = read_amount(&env, DataKey::MarketLocked(protected_asset, payout_token));
+        (((market + additional) * BPS / usable).min(BPS)) as u32
+    }
+
+    pub fn get_provider_nav(env: Env, token: Address) -> i128 {
+        provider_nav(&pool(&env, &token))
+    }
+
+    pub fn quote_shares(env: Env, token: Address, amount: i128) -> i128 {
+        checked_positive(&env, amount);
+        let state = pool(&env, &token);
+        let nav = provider_nav(&state);
+        if state.total_shares == 0 || nav <= 0 {
+            amount
+        } else {
+            amount * state.total_shares / nav
+        }
     }
 
     pub fn get_locked_for_position(env: Env, position_id: u64) -> i128 {
-        read_i128(&env, &DataKey::PositionLock(position_id))
+        read_amount(&env, DataKey::PositionLock(position_id))
     }
 
-    pub fn get_claim(env: Env, claim_id: u64) -> ClaimRecord {
-        claim(&env, claim_id)
+    pub fn get_claim(env: Env, position_id: u64) -> ClaimRecord {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Claim(position_id))
+            .unwrap_or_else(|| panic_with_error!(&env, ReserveError::ClaimNotFound))
     }
 
-    pub fn get_user_claims(env: Env, user: Address) -> Vec<u64> {
-        user_claims(&env, &user)
+    pub fn get_withdrawal(env: Env, request_id: u64) -> WithdrawalRequest {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Withdrawal(request_id))
+            .unwrap_or_else(|| panic_with_error!(&env, ReserveError::RequestClosed))
     }
 
-    pub fn get_current_epoch(env: Env) -> u64 {
-        current_epoch(&env)
-    }
-
-    pub fn get_floor_bps(env: Env) -> u32 {
-        floor_bps(&env)
-    }
-
-    pub fn get_drain_bps(env: Env) -> u32 {
-        drain_bps(&env)
-    }
-
-    pub fn get_epoch_total(env: Env, epoch_id: u64, token: Address) -> i128 {
-        read_i128(&env, &DataKey::EpochTotal(epoch_id, token))
-    }
-
-    pub fn get_epoch_allocated(env: Env, epoch_id: u64, token: Address) -> i128 {
-        read_i128(&env, &DataKey::EpochAllocated(epoch_id, token))
-    }
-
-    pub fn quote_withdraw(env: Env, claim_id: u64) -> i128 {
-        let record = claim(&env, claim_id);
-        let epoch_total = read_i128(
-            &env,
-            &DataKey::EpochTotal(record.epoch_id, record.token.clone()),
-        );
-        if epoch_total <= 0 {
-            return 0;
-        }
-        let epoch_allocated = read_i128(
-            &env,
-            &DataKey::EpochAllocated(record.epoch_id, record.token.clone()),
-        );
-        let mut allocated_to_claim = record.approved_amount * epoch_allocated / epoch_total;
-        if allocated_to_claim > record.approved_amount {
-            allocated_to_claim = record.approved_amount;
-        }
-        if allocated_to_claim <= record.withdrawn_amount {
-            return 0;
-        }
-        allocated_to_claim - record.withdrawn_amount
-    }
-
-    pub fn set_restricted_payout_policy(env: Env, admin: Address, floor_bps: u32, drain_bps: u32) {
-        require_admin(&env, &admin);
-        if floor_bps > 9_000 || drain_bps == 0 || drain_bps > 10_000 {
-            panic_with_error!(&env, ReserveError::InvalidBps);
-        }
-        env.storage().instance().set(&DataKey::FloorBps, &floor_bps);
-        env.storage().instance().set(&DataKey::DrainBps, &drain_bps);
-        env.events().publish(
-            (Symbol::new(&env, "restricted_payout_policy_updated"), admin),
-            (floor_bps, drain_bps),
-        );
+    pub fn extend_ttl(env: Env) {
+        env.storage()
+            .instance()
+            .extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_EXTEND_TO);
     }
 }
 

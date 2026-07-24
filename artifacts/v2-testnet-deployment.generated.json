@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "2.2.0",
+  "project": "CoverFi",
+  "network": "testnet",
+  "deployedWith": "Docker Desktop",
+  "contracts": {
+    "oracleAdapter": "CAEF67I4OMEYFBIFPLRQRM6QUF76SHIFXPDNYGPAYLDFRD7JNO4GL3Q7",
+    "reserveVault": "CANZZ2TNQHMIG46STIMHWFXFJKCM242Z3CI7RDZPCYPSZZ5AXSKDH6GU",
+    "protectedBalanceVault": "CD7RS5BZQRHLGCVBH4BCDXQR4TZH5WMKSQFHMDH7GIGFBGDMLEJXLCGJ",
+    "zkVerifier": "CBFL4CGXLHUO6ONOUPIWFMOVOYR3W77N3LKADUDMBKVQXYXFFHYPHWCU",
+    "protectionEngine": "CDR3FFH3EXSD4DZAI75Y5F2UDVE3OCSEXHV5WHY4BLGISVA4MJNT6Q7L",
+    "usernameRegistry": "CC5P6SNLLBDT2WOK5VN3DU5T2VI3422NN22DLZE6NSNRZY7FWFCLSAHS",
+    "receiptRegistry": "CABWSHOHYJQ7KDIG5LP6JIRXAWY3UIMGLEZG4B63LFIEJXXMFB3BO3T2"
+  },
+  "assets": {
+    "protectedPrincipal": { "symbol": "XLM", "tokenContract": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC" },
+    "premiumAndPayout": { "symbol": "CFTUSD", "tokenContract": "CCYYFPYEUIZ65AV2VW6L3EDXCN3TXNZJ3VWTPYPRKG327J5DHTCTHZEG" }
+  },
+  "reserveSeed": { "reserveDepositedStroops": "40000000000", "automationFundedStroops": "2000000000" },
+  "smokeTestedAt": "2026-07-23T23:34:12Z",
+  "smokeTest": "Oracle quorum refresh, protection configuration, quote, create_position preflight, and reserve reads passed."
+}

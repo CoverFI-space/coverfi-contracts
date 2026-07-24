@@ -1086,6 +1086,7 @@ dependencies = [
  "protected_balance_vault",
  "reserve_vault",
  "soroban-sdk",
+ "zk_verifier",
 ]
 
 [[package]]
@@ -1935,6 +1936,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "zk_verifier"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
 ]
 
 [[package]]

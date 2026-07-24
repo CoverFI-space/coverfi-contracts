@@ -1,9 +1,16 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype, panic_with_error, Address, BytesN, Env,
-    String, Vec,
+    contract, contracterror, contractimpl, contracttype, panic_with_error, token, Address, BytesN,
+    Env, Symbol, Vec,
 };
+
+const RECEIPT_FEE: i128 = 1_000_000;
+const MIN_BATCH_FEE: i128 = 10_000_000;
+const PER_BATCH_RECEIPT_FEE: i128 = 20_000;
+const DISPUTE_BOND: i128 = 10_000_000;
+const INSTANCE_TTL_THRESHOLD: u32 = 30 * 17_280;
+const INSTANCE_TTL_EXTEND_TO: u32 = 120 * 17_280;
 
 #[contract]
 pub struct ReceiptRegistry;
@@ -19,11 +26,9 @@ pub enum ReceiptStatus {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Receipt {
     pub receipt_id: u64,
-    pub sender: Address,
-    pub receiver: Address,
-    pub payment_tx_hash: String,
+    pub owner: Address,
     pub receipt_hash: BytesN<32>,
-    pub encrypted_receipt_uri: String,
+    pub reference_hash: BytesN<32>,
     pub created_at: u64,
     pub status: ReceiptStatus,
 }
@@ -32,8 +37,10 @@ pub struct Receipt {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Batch {
     pub batch_id: u64,
+    pub merchant: Address,
     pub merkle_root: BytesN<32>,
     pub receipt_count: u32,
+    pub fee_paid: i128,
     pub created_at: u64,
 }
 
@@ -53,24 +60,46 @@ pub struct Dispute {
     pub opener: Address,
     pub reason_hash: BytesN<32>,
     pub response_hash: Option<BytesN<32>>,
-    pub result: Option<String>,
+    pub result_hash: Option<BytesN<32>>,
+    pub bond_amount: i128,
+    pub bond_refunded: bool,
     pub status: DisputeStatus,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TermsAcceptance {
+    pub user: Address,
+    pub terms_hash: BytesN<32>,
+    pub accepted_at: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ReceiptConfig {
+    pub admin: Address,
+    pub fee_token: Address,
+    pub treasury: Address,
+    pub automation: Address,
 }
 
 #[contracttype]
 #[derive(Clone)]
 enum DataKey {
-    Admin,
+    Config,
+    PendingAdmin,
     NextReceiptId,
     NextBatchId,
     NextDisputeId,
     Receipt(u64),
-    PaymentReceipt(String),
-    SentReceipts(Address),
-    ReceivedReceipts(Address),
+    ReceiptHash(BytesN<32>),
+    OwnerReceipts(Address),
     Viewers(u64),
     Batch(u64),
     Dispute(u64),
+    Terms(Address),
+    TreasuryRevenue,
+    AutomationRevenue,
 }
 
 #[contracterror]
@@ -84,25 +113,26 @@ pub enum ReceiptRegistryError {
     NotAuthorized = 5,
     AlreadyDisputed = 6,
     InvalidReceiptMetadata = 7,
-    DuplicatePaymentHash = 8,
+    DuplicateReceiptHash = 8,
     ViewerAlreadyExists = 9,
     ViewerNotFound = 10,
     BatchNotFound = 11,
     InvalidReceiptCount = 12,
     DisputeNotFound = 13,
     InvalidStatus = 14,
+    TermsNotFound = 15,
 }
 
-fn admin(env: &Env) -> Address {
+fn config(env: &Env) -> ReceiptConfig {
     env.storage()
         .instance()
-        .get(&DataKey::Admin)
+        .get(&DataKey::Config)
         .unwrap_or_else(|| panic_with_error!(env, ReceiptRegistryError::NotInitialized))
 }
 
 fn require_admin(env: &Env, caller: &Address) {
     caller.require_auth();
-    if *caller != admin(env) {
+    if *caller != config(env).admin {
         panic_with_error!(env, ReceiptRegistryError::NotAdmin);
     }
 }
@@ -120,15 +150,15 @@ fn receipt(env: &Env, receipt_id: u64) -> Receipt {
         .unwrap_or_else(|| panic_with_error!(env, ReceiptRegistryError::ReceiptNotFound))
 }
 
-fn set_receipt(env: &Env, record: &Receipt) {
+fn set_receipt(env: &Env, value: &Receipt) {
     env.storage()
         .persistent()
-        .set(&DataKey::Receipt(record.receipt_id), record);
+        .set(&DataKey::Receipt(value.receipt_id), value);
 }
 
 fn is_party(env: &Env, receipt_id: u64, user: &Address) -> bool {
-    let record = receipt(env, receipt_id);
-    *user == record.sender || *user == record.receiver
+    let value = receipt(env, receipt_id);
+    *user == value.owner
 }
 
 fn require_party(env: &Env, receipt_id: u64, user: &Address) {
@@ -148,22 +178,54 @@ fn push_id(env: &Env, key: DataKey, receipt_id: u64) {
     env.storage().persistent().set(&key, &list);
 }
 
-fn validate_receipt_metadata(env: &Env, payment_tx_hash: &String, encrypted_receipt_uri: &String) {
-    let tx_len = payment_tx_hash.len();
-    let uri_len = encrypted_receipt_uri.len();
-    if tx_len == 0 || tx_len > 128 || uri_len == 0 || uri_len > 256 {
-        panic_with_error!(env, ReceiptRegistryError::InvalidReceiptMetadata);
-    }
+fn route_fee(env: &Env, payer: &Address, amount: i128) {
+    let cfg = config(env);
+    let treasury_amount = amount;
+    let automation_amount = 0_i128;
+    let client = token::Client::new(env, &cfg.fee_token);
+    client.transfer(payer, &cfg.treasury, &treasury_amount);
+    let treasury_total: i128 = env
+        .storage()
+        .persistent()
+        .get(&DataKey::TreasuryRevenue)
+        .unwrap_or(0);
+    let automation_total: i128 = env
+        .storage()
+        .persistent()
+        .get(&DataKey::AutomationRevenue)
+        .unwrap_or(0);
+    env.storage().persistent().set(
+        &DataKey::TreasuryRevenue,
+        &(treasury_total + treasury_amount),
+    );
+    env.storage().persistent().set(
+        &DataKey::AutomationRevenue,
+        &(automation_total + automation_amount),
+    );
 }
 
 #[contractimpl]
 impl ReceiptRegistry {
-    pub fn initialize(env: Env, admin: Address) {
-        if env.storage().instance().has(&DataKey::Admin) {
+    pub fn initialize(
+        env: Env,
+        admin: Address,
+        fee_token: Address,
+        treasury: Address,
+        automation: Address,
+    ) {
+        if env.storage().instance().has(&DataKey::Config) {
             panic_with_error!(&env, ReceiptRegistryError::AlreadyInitialized);
         }
         admin.require_auth();
-        env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage().instance().set(
+            &DataKey::Config,
+            &ReceiptConfig {
+                admin,
+                fee_token,
+                treasury,
+                automation,
+            },
+        );
         env.storage()
             .instance()
             .set(&DataKey::NextReceiptId, &1_u64);
@@ -175,42 +237,39 @@ impl ReceiptRegistry {
 
     pub fn create_receipt(
         env: Env,
-        sender: Address,
-        receiver: Address,
-        payment_tx_hash: String,
+        owner: Address,
         receipt_hash: BytesN<32>,
-        encrypted_receipt_uri: String,
+        reference_hash: BytesN<32>,
     ) -> u64 {
-        sender.require_auth();
-        validate_receipt_metadata(&env, &payment_tx_hash, &encrypted_receipt_uri);
-        let payment_key = DataKey::PaymentReceipt(payment_tx_hash.clone());
-        if env.storage().persistent().has(&payment_key) {
-            panic_with_error!(&env, ReceiptRegistryError::DuplicatePaymentHash);
+        owner.require_auth();
+        let hash_key = DataKey::ReceiptHash(receipt_hash.clone());
+        if env.storage().persistent().has(&hash_key) {
+            panic_with_error!(&env, ReceiptRegistryError::DuplicateReceiptHash);
         }
-
+        route_fee(&env, &owner, RECEIPT_FEE);
         let receipt_id = next_id(&env, DataKey::NextReceiptId);
-        let record = Receipt {
+        let value = Receipt {
             receipt_id,
-            sender: sender.clone(),
-            receiver: receiver.clone(),
-            payment_tx_hash,
+            owner: owner.clone(),
             receipt_hash,
-            encrypted_receipt_uri,
+            reference_hash,
             created_at: env.ledger().timestamp(),
             status: ReceiptStatus::Active,
         };
-
-        set_receipt(&env, &record);
-        env.storage().persistent().set(&payment_key, &receipt_id);
-        push_id(&env, DataKey::SentReceipts(sender), receipt_id);
-        push_id(&env, DataKey::ReceivedReceipts(receiver), receipt_id);
+        set_receipt(&env, &value);
+        env.storage().persistent().set(&hash_key, &receipt_id);
+        push_id(&env, DataKey::OwnerReceipts(owner), receipt_id);
+        env.events().publish(
+            (Symbol::new(&env, "receipt_anchored"), receipt_id),
+            (value.receipt_hash, value.reference_hash, RECEIPT_FEE),
+        );
         receipt_id
     }
 
-    pub fn get_receipt_id_for_payment_hash(env: Env, payment_tx_hash: String) -> u64 {
+    pub fn get_receipt_id_for_hash(env: Env, receipt_hash: BytesN<32>) -> u64 {
         env.storage()
             .persistent()
-            .get(&DataKey::PaymentReceipt(payment_tx_hash))
+            .get(&DataKey::ReceiptHash(receipt_hash))
             .unwrap_or_else(|| panic_with_error!(&env, ReceiptRegistryError::ReceiptNotFound))
     }
 
@@ -218,17 +277,10 @@ impl ReceiptRegistry {
         receipt(&env, receipt_id)
     }
 
-    pub fn get_sent_receipts(env: Env, sender: Address) -> Vec<u64> {
+    pub fn get_owner_receipts(env: Env, owner: Address) -> Vec<u64> {
         env.storage()
             .persistent()
-            .get(&DataKey::SentReceipts(sender))
-            .unwrap_or(Vec::new(&env))
-    }
-
-    pub fn get_received_receipts(env: Env, receiver: Address) -> Vec<u64> {
-        env.storage()
-            .persistent()
-            .get(&DataKey::ReceivedReceipts(receiver))
+            .get(&DataKey::OwnerReceipts(owner))
             .unwrap_or(Vec::new(&env))
     }
 
@@ -238,16 +290,6 @@ impl ReceiptRegistry {
 
     pub fn is_receipt_party(env: Env, receipt_id: u64, user: Address) -> bool {
         is_party(&env, receipt_id, &user)
-    }
-
-    pub fn mark_disputed(env: Env, user: Address, receipt_id: u64) {
-        require_party(&env, receipt_id, &user);
-        let mut record = receipt(&env, receipt_id);
-        if record.status == ReceiptStatus::Disputed {
-            panic_with_error!(&env, ReceiptRegistryError::AlreadyDisputed);
-        }
-        record.status = ReceiptStatus::Disputed;
-        set_receipt(&env, &record);
     }
 
     pub fn grant_access(env: Env, caller: Address, receipt_id: u64, viewer: Address) {
@@ -300,37 +342,42 @@ impl ReceiptRegistry {
             .unwrap_or(Vec::new(&env))
     }
 
+    pub fn quote_batch_fee(_env: Env, receipt_count: u32) -> i128 {
+        if receipt_count == 0 {
+            return 0;
+        }
+        (PER_BATCH_RECEIPT_FEE * i128::from(receipt_count)).max(MIN_BATCH_FEE)
+    }
+
     pub fn anchor_batch(
         env: Env,
-        admin: Address,
+        merchant: Address,
         merkle_root: BytesN<32>,
         receipt_count: u32,
     ) -> u64 {
-        require_admin(&env, &admin);
+        merchant.require_auth();
         if receipt_count == 0 {
             panic_with_error!(&env, ReceiptRegistryError::InvalidReceiptCount);
         }
-
+        let fee = Self::quote_batch_fee(env.clone(), receipt_count);
+        route_fee(&env, &merchant, fee);
         let batch_id = next_id(&env, DataKey::NextBatchId);
-        let batch = Batch {
+        let value = Batch {
             batch_id,
+            merchant,
             merkle_root,
             receipt_count,
+            fee_paid: fee,
             created_at: env.ledger().timestamp(),
         };
         env.storage()
             .persistent()
-            .set(&DataKey::Batch(batch_id), &batch);
+            .set(&DataKey::Batch(batch_id), &value);
         batch_id
     }
 
     pub fn verify_batch(env: Env, batch_id: u64, merkle_root: BytesN<32>) -> bool {
-        let batch: Batch = env
-            .storage()
-            .persistent()
-            .get(&DataKey::Batch(batch_id))
-            .unwrap_or_else(|| panic_with_error!(&env, ReceiptRegistryError::BatchNotFound));
-        batch.merkle_root == merkle_root
+        Self::get_batch(env, batch_id).merkle_root == merkle_root
     }
 
     pub fn get_batch(env: Env, batch_id: u64) -> Batch {
@@ -342,66 +389,71 @@ impl ReceiptRegistry {
 
     pub fn open_dispute(env: Env, user: Address, receipt_id: u64, reason_hash: BytesN<32>) -> u64 {
         require_party(&env, receipt_id, &user);
-        let mut record = receipt(&env, receipt_id);
-        if record.status == ReceiptStatus::Disputed {
+        let mut value = receipt(&env, receipt_id);
+        if value.status == ReceiptStatus::Disputed {
             panic_with_error!(&env, ReceiptRegistryError::AlreadyDisputed);
         }
-        record.status = ReceiptStatus::Disputed;
-        set_receipt(&env, &record);
-
+        token::Client::new(&env, &config(&env).fee_token).transfer(
+            &user,
+            &env.current_contract_address(),
+            &DISPUTE_BOND,
+        );
+        value.status = ReceiptStatus::Disputed;
+        set_receipt(&env, &value);
         let dispute_id = next_id(&env, DataKey::NextDisputeId);
-        let dispute = Dispute {
-            dispute_id,
-            receipt_id,
-            opener: user,
-            reason_hash,
-            response_hash: None,
-            result: None,
-            status: DisputeStatus::Open,
-        };
-        env.storage()
-            .persistent()
-            .set(&DataKey::Dispute(dispute_id), &dispute);
+        env.storage().persistent().set(
+            &DataKey::Dispute(dispute_id),
+            &Dispute {
+                dispute_id,
+                receipt_id,
+                opener: user,
+                reason_hash,
+                response_hash: None,
+                result_hash: None,
+                bond_amount: DISPUTE_BOND,
+                bond_refunded: false,
+                status: DisputeStatus::Open,
+            },
+        );
         dispute_id
     }
 
     pub fn respond_dispute(env: Env, user: Address, dispute_id: u64, response_hash: BytesN<32>) {
-        let mut dispute: Dispute = env
-            .storage()
-            .persistent()
-            .get(&DataKey::Dispute(dispute_id))
-            .unwrap_or_else(|| panic_with_error!(&env, ReceiptRegistryError::DisputeNotFound));
-        if dispute.status != DisputeStatus::Open {
+        let mut value = Self::get_dispute(env.clone(), dispute_id);
+        if value.status != DisputeStatus::Open {
             panic_with_error!(&env, ReceiptRegistryError::InvalidStatus);
         }
-        require_party(&env, dispute.receipt_id, &user);
-        if dispute.opener == user {
+        require_party(&env, value.receipt_id, &user);
+        if value.opener == user {
             panic_with_error!(&env, ReceiptRegistryError::NotAuthorized);
         }
-
-        dispute.response_hash = Some(response_hash);
-        dispute.status = DisputeStatus::Responded;
+        value.response_hash = Some(response_hash);
+        value.status = DisputeStatus::Responded;
         env.storage()
             .persistent()
-            .set(&DataKey::Dispute(dispute_id), &dispute);
+            .set(&DataKey::Dispute(dispute_id), &value);
     }
 
-    pub fn resolve_dispute(env: Env, admin: Address, dispute_id: u64, result: String) {
+    pub fn resolve_dispute(env: Env, admin: Address, dispute_id: u64, result_hash: BytesN<32>) {
         require_admin(&env, &admin);
-        let mut dispute: Dispute = env
-            .storage()
-            .persistent()
-            .get(&DataKey::Dispute(dispute_id))
-            .unwrap_or_else(|| panic_with_error!(&env, ReceiptRegistryError::DisputeNotFound));
-        if dispute.status == DisputeStatus::Resolved {
+        let mut value = Self::get_dispute(env.clone(), dispute_id);
+        if value.status == DisputeStatus::Resolved {
             panic_with_error!(&env, ReceiptRegistryError::InvalidStatus);
         }
-
-        dispute.result = Some(result);
-        dispute.status = DisputeStatus::Resolved;
+        token::Client::new(&env, &config(&env).fee_token).transfer(
+            &env.current_contract_address(),
+            &value.opener,
+            &value.bond_amount,
+        );
+        value.result_hash = Some(result_hash);
+        value.bond_refunded = true;
+        value.status = DisputeStatus::Resolved;
         env.storage()
             .persistent()
-            .set(&DataKey::Dispute(dispute_id), &dispute);
+            .set(&DataKey::Dispute(dispute_id), &value);
+        let mut receipt_value = receipt(&env, value.receipt_id);
+        receipt_value.status = ReceiptStatus::Active;
+        set_receipt(&env, &receipt_value);
     }
 
     pub fn get_dispute(env: Env, dispute_id: u64) -> Dispute {
@@ -410,4 +462,77 @@ impl ReceiptRegistry {
             .get(&DataKey::Dispute(dispute_id))
             .unwrap_or_else(|| panic_with_error!(&env, ReceiptRegistryError::DisputeNotFound))
     }
+
+    pub fn record_terms_acceptance(
+        env: Env,
+        user: Address,
+        terms_hash: BytesN<32>,
+    ) -> TermsAcceptance {
+        user.require_auth();
+        let value = TermsAcceptance {
+            user: user.clone(),
+            terms_hash,
+            accepted_at: env.ledger().timestamp(),
+        };
+        env.storage()
+            .persistent()
+            .set(&DataKey::Terms(user), &value);
+        value
+    }
+
+    pub fn get_terms_acceptance(env: Env, user: Address) -> TermsAcceptance {
+        env.storage()
+            .persistent()
+            .get(&DataKey::Terms(user))
+            .unwrap_or_else(|| panic_with_error!(&env, ReceiptRegistryError::TermsNotFound))
+    }
+
+    pub fn get_revenue(env: Env) -> (i128, i128) {
+        (
+            env.storage()
+                .persistent()
+                .get(&DataKey::TreasuryRevenue)
+                .unwrap_or(0),
+            env.storage()
+                .persistent()
+                .get(&DataKey::AutomationRevenue)
+                .unwrap_or(0),
+        )
+    }
+
+    pub fn get_config(env: Env) -> ReceiptConfig {
+        config(&env)
+    }
+
+    pub fn propose_admin(env: Env, admin: Address, pending: Address) {
+        require_admin(&env, &admin);
+        env.storage()
+            .instance()
+            .set(&DataKey::PendingAdmin, &pending);
+    }
+
+    pub fn accept_admin(env: Env, pending: Address) {
+        pending.require_auth();
+        let expected: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::PendingAdmin)
+            .unwrap_or_else(|| panic_with_error!(&env, ReceiptRegistryError::NotAdmin));
+        if expected != pending {
+            panic_with_error!(&env, ReceiptRegistryError::NotAdmin);
+        }
+        let mut cfg = config(&env);
+        cfg.admin = pending;
+        env.storage().instance().set(&DataKey::Config, &cfg);
+        env.storage().instance().remove(&DataKey::PendingAdmin);
+    }
+
+    pub fn extend_ttl(env: Env) {
+        env.storage()
+            .instance()
+            .extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_EXTEND_TO);
+    }
 }
+
+#[cfg(test)]
+mod test;

@@ -16,3 +16,4 @@ oracle_adapter = { path = "../oracle_adapter" }
 protected_balance_vault = { path = "../protected_balance_vault" }
 reserve_vault = { path = "../reserve_vault" }
 soroban-sdk = { workspace = true, features = ["testutils"] }
+zk_verifier = { path = "../zk_verifier" }

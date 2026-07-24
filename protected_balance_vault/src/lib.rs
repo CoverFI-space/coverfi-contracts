@@ -9,10 +9,14 @@ use soroban_sdk::{
 #[contract]
 pub struct ProtectedBalanceVault;
 
+const INSTANCE_TTL_THRESHOLD: u32 = 30 * 17_280;
+const INSTANCE_TTL_EXTEND_TO: u32 = 120 * 17_280;
+
 #[contracttype]
 #[derive(Clone)]
 enum DataKey {
     Admin,
+    PendingAdmin,
     Engine,
     PositionBalance(u64),
     TokenBalance(Address),
@@ -27,6 +31,7 @@ pub enum ProtectedBalanceError {
     NotEngine = 3,
     InvalidAmount = 4,
     InsufficientBalance = 5,
+    NotAdmin = 6,
 }
 
 fn configured_engine(env: &Env) -> Address {
@@ -34,6 +39,20 @@ fn configured_engine(env: &Env) -> Address {
         .instance()
         .get(&DataKey::Engine)
         .unwrap_or_else(|| panic_with_error!(env, ProtectedBalanceError::NotInitialized))
+}
+
+fn configured_admin(env: &Env) -> Address {
+    env.storage()
+        .instance()
+        .get(&DataKey::Admin)
+        .unwrap_or_else(|| panic_with_error!(env, ProtectedBalanceError::NotInitialized))
+}
+
+fn require_admin(env: &Env, caller: &Address) {
+    caller.require_auth();
+    if *caller != configured_admin(env) {
+        panic_with_error!(env, ProtectedBalanceError::NotAdmin);
+    }
 }
 
 fn require_engine(env: &Env, caller: &Address) {
@@ -126,5 +145,40 @@ impl ProtectedBalanceVault {
 
     pub fn get_total_token_balance(env: Env, token: Address) -> i128 {
         read_i128(&env, &DataKey::TokenBalance(token))
+    }
+
+    pub fn get_admin(env: Env) -> Address {
+        configured_admin(&env)
+    }
+
+    pub fn get_engine(env: Env) -> Address {
+        configured_engine(&env)
+    }
+
+    pub fn propose_admin(env: Env, admin: Address, pending: Address) {
+        require_admin(&env, &admin);
+        env.storage()
+            .instance()
+            .set(&DataKey::PendingAdmin, &pending);
+    }
+
+    pub fn accept_admin(env: Env, pending: Address) {
+        pending.require_auth();
+        let expected: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::PendingAdmin)
+            .unwrap_or_else(|| panic_with_error!(&env, ProtectedBalanceError::NotAdmin));
+        if pending != expected {
+            panic_with_error!(&env, ProtectedBalanceError::NotAdmin);
+        }
+        env.storage().instance().set(&DataKey::Admin, &pending);
+        env.storage().instance().remove(&DataKey::PendingAdmin);
+    }
+
+    pub fn extend_ttl(env: Env) {
+        env.storage()
+            .instance()
+            .extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_EXTEND_TO);
     }
 }
