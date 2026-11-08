@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "3.0.0",
+  "project": "CoverFi",
+  "reviewedAt": "2026-11-08",
+  "repository": "https://github.com/CoverFI-space/coverfi-contracts",
+  "status": "historical_records_not_revalidated",
+  "fundingScope": "FUNDING_SCOPE.md",
+  "publicWorkspaceCrates": [
+    "protection_engine",
+    "protected_balance_vault",
+    "reserve_vault",
+    "oracle_adapter",
+    "username_registry",
+    "receipt_registry",
+    "zk_verifier"
+  ],
+  "networks": {
+    "testnet": {
+      "status": "unverified_historical_snapshot",
+      "lastReportedUpdate": "2026-08-23T00:00:00+05:30",
+      "contracts": {
+        "quorumOracleSource": null,
+        "oracleAdapter": "CBAEBBX6ZJGQDWJ4HW2OXJWVGVTQ2THCVFV3O4L3UK3VFDBYW656OV47",
+        "reserveVault": "CDFEBN3QBAUVP7LBJFPUEL2ZGGKU22XH57ROVBR44YF7NATWK5VR6PFP",
+        "protectedBalanceVault": "CBS5V4JO33GD5RAIR7S4V722RSFJZTAKW3G74SZWP6U4GIVV5ADCC27Z",
+        "zkVerifier": "CBBJZABCCL6BCMJNWTOKLDO4FGCUXVRDZDWJ6CURX3KQI6VVIWAMX4AN",
+        "protectionEngine": "CDP2CF23HFMPQ4LS64OBLYNLY7WGD3JWRNL3TEYU2DCGMGZZYHLU7VMV",
+        "usernameRegistry": "CDLETXOPLYOY752OQLABBGOKN4BB2O2FQW4I222O4SH4H6CLRV2XQKTM",
+        "receiptRegistry": "CCRGWBRPQZTYPU3FEIQO4ZVQ5V4B3LAE7AQABI55APIQRL7CIQWPSSFU",
+        "paymentLockEngine": "CCVQV6QRTQULDBNQ3GPY4DBSGSHJ2VRVW5BJ5EDHDJXBQBNFNGH2WNAW",
+        "paymentLockReserveVault": "CBJNXQA535DSWNWOOUX2LEZMSWFOSFRJBHRQSVY3N3JMP64JKRSOIJQG",
+        "floorShieldEngine": "CCQ2S24ZC2BKICY5RQNJWDHEUZGBPVP73YA6HEHUY33JYYTEO3AZHJPL",
+        "floorShieldReserveVault": "CDOI47NDMAPXSNWEAQXMXG6U7ZO2RH72Y5QF5ZHYBS6AMCHZ6T5FT3P5",
+        "floorShieldProtectedVault": "CBKQM3KHXJ456MFRLNTNLUZMDLUO3MAN4F23MUKVR4Q7O5CXJFKV3LMX"
+      },
+      "sourceCommit": null,
+      "wasmHashes": null,
+      "lastVerifiedAt": null,
+      "reserveFundingStatus": "historical_local_record_says_unfunded_current_state_unknown",
+      "warning": "Historical local records only. IDs are not matched to this public source and may be stale after network resets. Do not use as active configuration without ledger and WASM verification."
+    },
+    "mainnet": {
+      "status": "not_deployed",
+      "contracts": {},
+      "lastVerifiedAt": null
+    }
+  },
+  "limitations": [
+    "No live RPC verification was performed for this revision.",
+    "Historical IDs include local-only experimental code not present in the public workspace.",
+    "The local registry contains a July smoke-test date preceding August redeploy notes; that smoke test does not verify the later IDs.",
+    "All testnet tokens have no monetary value."
+  ]
+}

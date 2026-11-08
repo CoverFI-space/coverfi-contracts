@@ -1,5 +1,19 @@
 # CoverFi Smart Contracts (Open Source)
 
+## Current funding revision - 8 November 2026
+
+The proposed grant now covers **one USDC testnet protection market**, not the broader product suite below. Mainnet is not recorded as deployed. No current deployment, LP capital or partner integration is verified by this revision.
+
+- [Funding scope and architecture](FUNDING_SCOPE.md)
+- [Revised SCF application answers](SCF_APPLICATION_REVISED.md)
+- [Evidence and release status](PROJECT_STATUS.md)
+- [Business and sustainability plan](BUSINESS_PLAN.md)
+- [AI assistance disclosure](AI_DISCLOSURE.md)
+- [Historical deployment registry](contracts.json)
+
+The seven-crate source and implementation notes below describe the legacy workspace. They do not establish a finished minimal depeg release or a source-to-deployment match. Additional local-only product contracts are excluded from this ask. Do not call this code independently audited without a linked audit report.
+
+
 CoverFi is a stablecoin loss-protection and payment protocol for Stellar/Soroban. This workspace contains the open-source smart contracts and tests; it does not include frontend, backend, or AI logic.
 
 ## Contracts
