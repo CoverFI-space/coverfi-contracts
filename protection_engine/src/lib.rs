@@ -1,8 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    contract, contractclient, contracterror, contractimpl, contracttype, panic_with_error, Address,
-    BytesN, Env, Symbol, Vec,
+    contract, contractclient, contracterror, contractimpl, contracttype, panic_with_error, token,
+    Address, Env, Symbol, Vec,
 };
 
 const BPS: i128 = 10_000;
@@ -20,16 +20,6 @@ const ONE_DAY: u64 = 86_400;
 const MAX_DURATION: u64 = 30 * ONE_DAY;
 const INSTANCE_TTL_THRESHOLD: u32 = 30 * 17_280;
 const INSTANCE_TTL_EXTEND_TO: u32 = 120 * 17_280;
-const MFA_CIRCUIT_ID: [u8; 32] = [
-    0xd3, 0xd3, 0xbd, 0x01, 0x73, 0x8a, 0xc6, 0x4c, 0xc0, 0xad, 0x02, 0xa0, 0x74, 0xbb, 0x24,
-    0xdb, 0x18, 0x8d, 0xf4, 0x25, 0xd1, 0xf5, 0x86, 0xaf, 0x4e, 0x7c, 0xce, 0x50, 0x50, 0x66,
-    0x96, 0xeb,
-];
-const KYC_CIRCUIT_ID: [u8; 32] = [
-    0x00, 0x84, 0xe5, 0xd6, 0x0f, 0xe2, 0x40, 0x45, 0x12, 0xe3, 0xec, 0xd6, 0x4f, 0xc3, 0x04,
-    0xb8, 0x5e, 0x01, 0x73, 0x88, 0x53, 0x4c, 0x31, 0xee, 0x52, 0xe9, 0xb0, 0x0c, 0x8c, 0xf9,
-    0x1a, 0x3e,
-];
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -40,6 +30,7 @@ pub struct PriceObservation {
 
 #[contractclient(name = "OracleAdapterClient")]
 pub trait OracleAdapterInterface {
+    fn get_market(env: Env) -> (Address, Address);
     fn get_fresh_price(env: Env, asset: Address) -> Option<PriceObservation>;
     fn get_price_at_or_before(
         env: Env,
@@ -109,11 +100,6 @@ pub trait ReserveVaultInterface {
         additional: i128,
     ) -> u32;
     fn get_protocol_fee_bps(env: Env) -> i128;
-}
-
-#[contractclient(name = "ZkVerifierClient")]
-pub trait ZkVerifierInterface {
-    fn has_verified(env: Env, subject: Address, circuit_id: BytesN<32>) -> bool;
 }
 
 #[contract]
@@ -191,12 +177,10 @@ pub struct Config {
     pub protected_balance_vault: Address,
     pub reserve_vault: Address,
     pub oracle_adapter: Address,
-    pub zk_verifier: Address,
     pub protected_asset: Address,
     pub payout_asset: Address,
     pub max_payout_bps: u32,
     pub max_oracle_age_seconds: u64,
-    pub high_value_threshold: i128,
     pub paused: bool,
 }
 
@@ -234,7 +218,8 @@ pub enum EngineError {
     ConcentrationLimit = 18,
     MathOverflow = 19,
     NotionalTooSmall = 20,
-    ComplianceRequired = 21,
+    InvalidTokenDecimals = 22,
+    OracleMarketMismatch = 23,
 }
 
 fn config(env: &Env) -> Config {
@@ -266,33 +251,6 @@ fn require_live(env: &Env) -> Config {
 fn validate_market(env: &Env, cfg: &Config, protected_asset: &Address, payout_asset: &Address) {
     if *protected_asset != cfg.protected_asset || *payout_asset != cfg.payout_asset {
         panic_with_error!(env, EngineError::UnsupportedMarket);
-    }
-}
-
-fn bytes32(env: &Env, value: [u8; 32]) -> BytesN<32> {
-    BytesN::from_array(env, &value)
-}
-
-fn high_value_amount(env: &Env, value: &Position) -> i128 {
-    value
-        .notional
-        .checked_add(value.claimable_payout)
-        .unwrap_or_else(|| panic_with_error!(env, EngineError::MathOverflow))
-}
-
-fn require_high_value_compliance(env: &Env, cfg: &Config, value: &Position, user: &Address) {
-    if cfg.high_value_threshold <= 0 {
-        return;
-    }
-    if high_value_amount(env, value) <= cfg.high_value_threshold {
-        return;
-    }
-
-    let verifier = ZkVerifierClient::new(env, &cfg.zk_verifier);
-    let has_mfa = verifier.has_verified(user, &bytes32(env, MFA_CIRCUIT_ID));
-    let has_kyc = verifier.has_verified(user, &bytes32(env, KYC_CIRCUIT_ID));
-    if !has_mfa || !has_kyc {
-        panic_with_error!(env, EngineError::ComplianceRequired);
     }
 }
 
@@ -499,12 +457,10 @@ impl ProtectionEngine {
         protected_balance_vault: Address,
         reserve_vault: Address,
         oracle_adapter: Address,
-        zk_verifier: Address,
         protected_asset: Address,
         payout_asset: Address,
         max_payout_bps: u32,
         max_oracle_age_seconds: u64,
-        high_value_threshold: i128,
     ) {
         if env.storage().instance().has(&DataKey::Config) {
             panic_with_error!(&env, EngineError::AlreadyInitialized);
@@ -513,10 +469,20 @@ impl ProtectionEngine {
         if max_payout_bps == 0
             || max_payout_bps > 1_000
             || max_oracle_age_seconds == 0
-            || high_value_threshold < 0
             || protected_asset == payout_asset
         {
             panic_with_error!(&env, EngineError::InvalidMaxPayoutBps);
+        }
+        // Amounts use Stellar's seven-decimal token units; prices are payout
+        // tokens per protected token, scaled by 1e8. No same-token depeg payout.
+        if token::Client::new(&env, &protected_asset).decimals() != 7
+            || token::Client::new(&env, &payout_asset).decimals() != 7
+        {
+            panic_with_error!(&env, EngineError::InvalidTokenDecimals);
+        }
+        let market = OracleAdapterClient::new(&env, &oracle_adapter).get_market();
+        if market != (protected_asset.clone(), payout_asset.clone()) {
+            panic_with_error!(&env, EngineError::OracleMarketMismatch);
         }
         set_config(
             &env,
@@ -525,12 +491,10 @@ impl ProtectionEngine {
                 protected_balance_vault,
                 reserve_vault,
                 oracle_adapter,
-                zk_verifier,
                 protected_asset,
                 payout_asset,
                 max_payout_bps,
                 max_oracle_age_seconds,
-                high_value_threshold,
                 paused: false,
             },
         );
@@ -676,7 +640,10 @@ impl ProtectionEngine {
                 keeper_rewarded: false,
             };
         };
-        if observation.price <= 0 {
+        if observation.price <= 0
+            || observation.timestamp > value.expiry_time
+            || value.expiry_time - observation.timestamp > EXPIRY_OBSERVATION_MAX_AGE
+        {
             panic_with_error!(&env, EngineError::InvalidPrice);
         }
         let payout = if observation.price >= value.entry_price {
@@ -730,7 +697,6 @@ impl ProtectionEngine {
         if value.status != PositionStatus::Claimable || value.claimable_payout <= 0 {
             panic_with_error!(&env, EngineError::NothingToClaim);
         }
-        require_high_value_compliance(&env, &cfg, &value, &user);
         let amount = ReserveVaultClient::new(&env, &cfg.reserve_vault).claim_payout(
             &env.current_contract_address(),
             &user,
@@ -769,7 +735,6 @@ impl ProtectionEngine {
         {
             panic_with_error!(&env, EngineError::InvalidStatus);
         }
-        require_high_value_compliance(&env, &cfg, &value, &user);
         ProtectedBalanceVaultClient::new(&env, &cfg.protected_balance_vault).withdraw_to(
             &env.current_contract_address(),
             &user,

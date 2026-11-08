@@ -1,5 +1,6 @@
 [workspace]
 resolver = "2"
+default-members = ["protection_engine", "reserve_vault", "protected_balance_vault", "oracle_adapter"]
 members = [
   "protection_engine",
   "protected_balance_vault",

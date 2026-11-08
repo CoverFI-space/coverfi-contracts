@@ -7,6 +7,9 @@ use soroban_sdk::{
 
 const TARGET_DECIMALS: u32 = 8;
 const MAX_OBSERVATIONS: u32 = 64;
+// Historical minute buckets preserve expiry observations after the quote ring
+// rolls over. Strictly increasing seconds bound each bucket to 60 entries.
+const MAX_HISTORY_LOOKBACK: u64 = 3_600;
 const INSTANCE_TTL_THRESHOLD: u32 = 30 * 17_280;
 const INSTANCE_TTL_EXTEND_TO: u32 = 120 * 17_280;
 
@@ -50,6 +53,8 @@ pub struct PriceObservation {
 pub struct OracleConfig {
     pub admin: Address,
     pub source: Address,
+    pub protected_asset: Address,
+    pub payout_asset: Address,
     pub source_asset: Symbol,
     pub source_decimals: u32,
     pub max_age_seconds: u64,
@@ -63,9 +68,11 @@ enum DataKey {
     Config,
     PendingAdmin,
     Observations(Address),
+    History(Address, u64),
+    PublisherEpoch,
     Publishers,
     Publisher(Address),
-    Submission(Address, u64, Address),
+    Submission(u64, Address, u64, Address),
 }
 
 #[contracterror]
@@ -83,6 +90,8 @@ pub enum OracleError {
     NotPublisher = 9,
     DuplicateSubmission = 10,
     InvalidConfig = 11,
+    UnsupportedAsset = 12,
+    MathOverflow = 13,
 }
 
 fn config(env: &Env) -> OracleConfig {
@@ -125,7 +134,9 @@ fn normalize(env: &Env, price: i128, decimals: u32) -> i128 {
     } else if decimals > TARGET_DECIMALS {
         price / pow10(env, decimals - TARGET_DECIMALS)
     } else {
-        price * pow10(env, TARGET_DECIMALS - decimals)
+        price
+            .checked_mul(pow10(env, TARGET_DECIMALS - decimals))
+            .unwrap_or_else(|| panic_with_error!(env, OracleError::MathOverflow))
     }
 }
 
@@ -136,14 +147,29 @@ fn observations(env: &Env, asset: &Address) -> Vec<PriceObservation> {
         .unwrap_or(Vec::new(env))
 }
 
-fn save_observation(env: &Env, asset: &Address, observation: PriceObservation) -> bool {
-    let cfg = config(env);
+fn require_asset(env: &Env, asset: &Address) {
+    if *asset != config(env).protected_asset {
+        panic_with_error!(env, OracleError::UnsupportedAsset);
+    }
+}
+
+fn validate_observation(env: &Env, observation: &PriceObservation) {
     if observation.price <= 0 {
         panic_with_error!(env, OracleError::InvalidPrice);
     }
-    if observation.timestamp > env.ledger().timestamp() + 60 {
+    let now = env.ledger().timestamp();
+    if observation.timestamp > now {
         panic_with_error!(env, OracleError::FuturePrice);
     }
+    if now - observation.timestamp > config(env).max_age_seconds {
+        panic_with_error!(env, OracleError::StalePrice);
+    }
+}
+
+fn save_observation(env: &Env, asset: &Address, observation: PriceObservation) -> bool {
+    require_asset(env, asset);
+    validate_observation(env, &observation);
+    let cfg = config(env);
     let mut list = observations(env, asset);
     if let Some(last) = list.last() {
         if observation.timestamp <= last.timestamp {
@@ -154,7 +180,10 @@ fn save_observation(env: &Env, asset: &Address, observation: PriceObservation) -
         } else {
             last.price - observation.price
         };
-        let deviation = delta * 10_000 / last.price;
+        let deviation = delta
+            .checked_mul(10_000)
+            .and_then(|value| value.checked_div(last.price))
+            .unwrap_or_else(|| panic_with_error!(env, OracleError::MathOverflow));
         if deviation > i128::from(cfg.max_deviation_bps) {
             panic_with_error!(env, OracleError::ExcessiveDeviation);
         }
@@ -162,6 +191,19 @@ fn save_observation(env: &Env, asset: &Address, observation: PriceObservation) -
     if list.len() >= MAX_OBSERVATIONS {
         list.remove(0);
     }
+    let history_key = DataKey::History(asset.clone(), observation.timestamp / 60);
+    let mut history: Vec<PriceObservation> = env
+        .storage()
+        .persistent()
+        .get(&history_key)
+        .unwrap_or(Vec::new(env));
+    history.push_back(observation.clone());
+    env.storage().persistent().set(&history_key, &history);
+    env.storage().persistent().extend_ttl(
+        &history_key,
+        INSTANCE_TTL_THRESHOLD,
+        INSTANCE_TTL_EXTEND_TO,
+    );
     list.push_back(observation.clone());
     env.storage()
         .persistent()
@@ -199,12 +241,20 @@ impl OracleAdapter {
         source_decimals: u32,
         max_age_seconds: u64,
         max_deviation_bps: u32,
+        protected_asset: Address,
+        payout_asset: Address,
     ) {
         if env.storage().instance().has(&DataKey::Config) {
             panic_with_error!(&env, OracleError::AlreadyInitialized);
         }
         admin.require_auth();
-        if max_age_seconds == 0 || max_deviation_bps == 0 || source_decimals > 18 {
+        if max_age_seconds == 0
+            || max_age_seconds > MAX_HISTORY_LOOKBACK
+            || max_deviation_bps == 0
+            || max_deviation_bps > 10_000
+            || source_decimals > 18
+            || protected_asset == payout_asset
+        {
             panic_with_error!(&env, OracleError::InvalidConfig);
         }
         set_config(
@@ -212,6 +262,8 @@ impl OracleAdapter {
             &OracleConfig {
                 admin,
                 source,
+                protected_asset,
+                payout_asset,
                 source_asset,
                 source_decimals,
                 max_age_seconds,
@@ -257,6 +309,14 @@ impl OracleAdapter {
             panic_with_error!(&env, OracleError::InvalidConfig);
         }
 
+        let epoch: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::PublisherEpoch)
+            .unwrap_or(0);
+        env.storage()
+            .instance()
+            .set(&DataKey::PublisherEpoch, &(epoch + 1));
         let previous: Vec<Address> = env
             .storage()
             .persistent()
@@ -306,6 +366,8 @@ impl OracleAdapter {
         timestamp: u64,
     ) -> bool {
         publisher.require_auth();
+        require_asset(&env, &asset);
+        validate_observation(&env, &PriceObservation { price, timestamp });
         let cfg = config(&env);
         let approved: bool = env
             .storage()
@@ -315,7 +377,12 @@ impl OracleAdapter {
         if !cfg.fallback_enabled || !approved {
             panic_with_error!(&env, OracleError::NotPublisher);
         }
-        let key = DataKey::Submission(asset.clone(), timestamp, publisher);
+        let epoch: u64 = env
+            .storage()
+            .instance()
+            .get(&DataKey::PublisherEpoch)
+            .unwrap_or(0);
+        let key = DataKey::Submission(epoch, asset.clone(), timestamp, publisher);
         if env.storage().persistent().has(&key) {
             panic_with_error!(&env, OracleError::DuplicateSubmission);
         }
@@ -329,6 +396,7 @@ impl OracleAdapter {
             .unwrap_or(Vec::new(&env));
         for configured_publisher in publishers.iter() {
             let submitted: Option<i128> = env.storage().persistent().get(&DataKey::Submission(
+                epoch,
                 asset.clone(),
                 timestamp,
                 configured_publisher,
@@ -343,6 +411,11 @@ impl OracleAdapter {
         false
     }
 
+    pub fn get_market(env: Env) -> (Address, Address) {
+        let cfg = config(&env);
+        (cfg.protected_asset, cfg.payout_asset)
+    }
+
     pub fn get_latest(env: Env, asset: Address) -> Option<PriceObservation> {
         observations(&env, &asset).last()
     }
@@ -350,7 +423,8 @@ impl OracleAdapter {
     pub fn get_fresh_price(env: Env, asset: Address) -> Option<PriceObservation> {
         let latest = observations(&env, &asset).last();
         if let Some(value) = latest {
-            if env.ledger().timestamp() <= value.timestamp + config(&env).max_age_seconds {
+            let now = env.ledger().timestamp();
+            if value.timestamp <= now && now - value.timestamp <= config(&env).max_age_seconds {
                 return Some(value);
             }
         }
@@ -363,15 +437,30 @@ impl OracleAdapter {
         timestamp: u64,
         max_age_seconds: u64,
     ) -> Option<PriceObservation> {
-        let list = observations(&env, &asset);
-        let mut index = list.len();
-        while index > 0 {
-            index -= 1;
-            if let Some(value) = list.get(index) {
-                if value.timestamp <= timestamp && timestamp - value.timestamp <= max_age_seconds {
+        require_asset(&env, &asset);
+        if timestamp > env.ledger().timestamp() || max_age_seconds > MAX_HISTORY_LOOKBACK {
+            return None;
+        }
+        let oldest = timestamp.saturating_sub(max_age_seconds);
+        let mut bucket = timestamp / 60;
+        loop {
+            let list: Vec<PriceObservation> = env
+                .storage()
+                .persistent()
+                .get(&DataKey::History(asset.clone(), bucket))
+                .unwrap_or(Vec::new(&env));
+            let mut index = list.len();
+            while index > 0 {
+                index -= 1;
+                let value = list.get(index).unwrap();
+                if value.timestamp <= timestamp && value.timestamp >= oldest {
                     return Some(value);
                 }
             }
+            if bucket == oldest / 60 {
+                break;
+            }
+            bucket -= 1;
         }
         None
     }
@@ -388,7 +477,11 @@ impl OracleAdapter {
         } else {
             first.price - last.price
         };
-        (delta * 10_000 / first.price).min(10_000) as u32
+        delta
+            .checked_mul(10_000)
+            .and_then(|value| value.checked_div(first.price))
+            .unwrap_or_else(|| panic_with_error!(&env, OracleError::MathOverflow))
+            .min(10_000) as u32
     }
 
     pub fn get_config(env: Env) -> OracleConfig {

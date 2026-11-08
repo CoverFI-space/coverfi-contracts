@@ -5,31 +5,29 @@ use oracle_adapter::{OracleAdapter, OracleAdapterClient};
 use protected_balance_vault::{ProtectedBalanceVault, ProtectedBalanceVaultClient};
 use reserve_vault::{ReserveVault, ReserveVaultClient};
 use soroban_sdk::{
-    testutils::{Address as _, Ledger},
-    token, Address, BytesN, Env, Symbol,
+    contract, contractimpl,
+    testutils::{Address as _, Ledger, MockAuth, MockAuthInvoke},
+    token, Address, Env, IntoVal, Symbol,
 };
-use zk_verifier::{ZkVerifier, ZkVerifierClient};
 
-const ENTRY_PRICE: i128 = 10_000_000;
-const SETTLEMENT_PRICE: i128 = 9_400_000;
-const HIGH_PRICE: i128 = 10_100_000;
-const AMOUNT: i128 = 10_000_000_000;
+#[contract]
+struct SixDecimalToken;
+
+#[contractimpl]
+impl SixDecimalToken {
+    pub fn decimals() -> u32 {
+        6
+    }
+}
+
+const ENTRY_PRICE: i128 = 100_000_000;
+const SETTLEMENT_PRICE: i128 = 94_000_000;
+const HIGH_PRICE: i128 = 101_000_000;
+const AMOUNT: i128 = 1_000_000_000;
 const NOTIONAL: i128 = 1_000_000_000;
 const MAX_PAYOUT: i128 = 100_000_000;
 const EXPECTED_PAYOUT: i128 = 60_000_000;
 const DURATION: u64 = 7 * 86_400;
-const DEFAULT_HIGH_VALUE_THRESHOLD: i128 = 10_000_000_000_000;
-const MFA_CIRCUIT_ID: [u8; 32] = [
-    0xd3, 0xd3, 0xbd, 0x01, 0x73, 0x8a, 0xc6, 0x4c, 0xc0, 0xad, 0x02, 0xa0, 0x74, 0xbb, 0x24,
-    0xdb, 0x18, 0x8d, 0xf4, 0x25, 0xd1, 0xf5, 0x86, 0xaf, 0x4e, 0x7c, 0xce, 0x50, 0x50, 0x66,
-    0x96, 0xeb,
-];
-const KYC_CIRCUIT_ID: [u8; 32] = [
-    0x00, 0x84, 0xe5, 0xd6, 0x0f, 0xe2, 0x40, 0x45, 0x12, 0xe3, 0xec, 0xd6, 0x4f, 0xc3, 0x04,
-    0xb8, 0x5e, 0x01, 0x73, 0x88, 0x53, 0x4c, 0x31, 0xee, 0x52, 0xe9, 0xb0, 0x0c, 0x8c, 0xf9,
-    0x1a, 0x3e,
-];
-
 struct Fixture {
     env: Env,
     admin: Address,
@@ -42,7 +40,6 @@ struct Fixture {
     protected_vault_id: Address,
     reserve_vault_id: Address,
     oracle_id: Address,
-    zk_verifier_id: Address,
     protected_asset: Address,
     payout_asset: Address,
 }
@@ -62,10 +59,6 @@ impl Fixture {
 
     fn oracle(&self) -> OracleAdapterClient<'_> {
         OracleAdapterClient::new(&self.env, &self.oracle_id)
-    }
-
-    fn zk_verifier(&self) -> ZkVerifierClient<'_> {
-        ZkVerifierClient::new(&self.env, &self.zk_verifier_id)
     }
 
     fn protected_token(&self) -> token::Client<'_> {
@@ -106,41 +99,9 @@ impl Fixture {
         self.env.ledger().set_timestamp(1_000 + DURATION);
         self.submit_price(1_000 + DURATION, price);
     }
-
-    fn anchor_compliance_proofs(&self) {
-        let mfa_circuit_id = BytesN::from_array(&self.env, &MFA_CIRCUIT_ID);
-        let kyc_circuit_id = BytesN::from_array(&self.env, &KYC_CIRCUIT_ID);
-        let verifier_hash = bytes(&self.env, 9);
-        self.zk_verifier().admin_record_proof(
-            &self.admin,
-            &self.user,
-            &mfa_circuit_id,
-            &bytes(&self.env, 10),
-            &bytes(&self.env, 11),
-            &bytes(&self.env, 12),
-            &verifier_hash,
-        );
-        self.zk_verifier().admin_record_proof(
-            &self.admin,
-            &self.user,
-            &kyc_circuit_id,
-            &bytes(&self.env, 20),
-            &bytes(&self.env, 21),
-            &bytes(&self.env, 22),
-            &verifier_hash,
-        );
-    }
 }
 
 fn setup(reserve_amount: i128) -> Fixture {
-    setup_with_threshold(reserve_amount, DEFAULT_HIGH_VALUE_THRESHOLD)
-}
-
-fn bytes(env: &Env, value: u8) -> BytesN<32> {
-    BytesN::from_array(env, &[value; 32])
-}
-
-fn setup_with_threshold(reserve_amount: i128, high_value_threshold: i128) -> Fixture {
     let env = Env::default();
     env.mock_all_auths_allowing_non_root_auth();
     env.ledger().set_timestamp(1_000);
@@ -167,13 +128,11 @@ fn setup_with_threshold(reserve_amount: i128, high_value_threshold: i128) -> Fix
     let protected_vault_id = env.register(ProtectedBalanceVault, ());
     let reserve_vault_id = env.register(ReserveVault, ());
     let oracle_id = env.register(OracleAdapter, ());
-    let zk_verifier_id = env.register(ZkVerifier, ());
     let engine_id = env.register(ProtectionEngine, ());
 
     let protected_vault = ProtectedBalanceVaultClient::new(&env, &protected_vault_id);
     let reserve_vault = ReserveVaultClient::new(&env, &reserve_vault_id);
     let oracle = OracleAdapterClient::new(&env, &oracle_id);
-    let zk_verifier = ZkVerifierClient::new(&env, &zk_verifier_id);
     let engine = ProtectionEngineClient::new(&env, &engine_id);
 
     protected_vault.initialize(&admin, &engine_id);
@@ -182,40 +141,23 @@ fn setup_with_threshold(reserve_amount: i128, high_value_threshold: i128) -> Fix
     oracle.initialize(
         &admin,
         &source,
-        &Symbol::new(&env, "XLM"),
+        &Symbol::new(&env, "USDC"),
         &8,
         &3_600,
         &2_000,
+        &protected_asset,
+        &payout_asset,
     );
     oracle.configure_publishers(&admin, &publisher1, &publisher2, &publisher3, &true);
-    zk_verifier.initialize(&admin);
-    let verifier_hash = bytes(&env, 9);
-    let kind_hash = bytes(&env, 8);
-    zk_verifier.register_verifier(
-        &admin,
-        &BytesN::from_array(&env, &MFA_CIRCUIT_ID),
-        &verifier_hash,
-        &kind_hash,
-        &true,
-    );
-    zk_verifier.register_verifier(
-        &admin,
-        &BytesN::from_array(&env, &KYC_CIRCUIT_ID),
-        &verifier_hash,
-        &kind_hash,
-        &true,
-    );
     engine.initialize(
         &admin,
         &protected_vault_id,
         &reserve_vault_id,
         &oracle_id,
-        &zk_verifier_id,
         &protected_asset,
         &payout_asset,
         &1_000,
         &3_600,
-        &high_value_threshold,
     );
     if reserve_amount > 0 {
         reserve_vault.deposit_reserve(&admin, &payout_asset, &reserve_amount, &reserve_amount);
@@ -233,7 +175,6 @@ fn setup_with_threshold(reserve_amount: i128, high_value_threshold: i128) -> Fix
         protected_vault_id,
         reserve_vault_id,
         oracle_id,
-        zk_verifier_id,
         protected_asset,
         payout_asset,
     };
@@ -285,13 +226,13 @@ fn creation_segregates_principal_routes_fees_and_locks_full_cap() {
     assert_eq!(fixture.payout_token().balance(&fixture.treasury), 1_440_000);
     assert_eq!(
         fixture.protected_token().balance(&fixture.user),
-        90_000_000_000
+        99_000_000_000
     );
     assert_eq!(fixture.payout_token().balance(&fixture.user), 987_500_000);
 }
 
 #[test]
-fn expiry_settlement_pays_full_stable_value_claim_without_epoch() {
+fn usdc_depeg_pays_in_distinct_quote_token_without_epoch() {
     let fixture = setup(100_000_000_000);
     let id = fixture.create_position();
     fixture.move_to_expiry_with_price(SETTLEMENT_PRICE);
@@ -323,34 +264,6 @@ fn expiry_settlement_pays_full_stable_value_claim_without_epoch() {
             .get_pool(&fixture.payout_asset)
             .reserved_claims,
         0
-    );
-}
-
-#[test]
-#[should_panic]
-fn high_value_claim_requires_mfa_and_kyc_proofs() {
-    let fixture = setup_with_threshold(100_000_000_000, NOTIONAL);
-    let id = fixture.create_position();
-    fixture.move_to_expiry_with_price(SETTLEMENT_PRICE);
-    fixture.engine().settle_position(&fixture.other, &id);
-    fixture.engine().claim_payout(&fixture.user, &id);
-}
-
-#[test]
-fn high_value_claim_and_principal_withdrawal_accept_anchored_mfa_and_kyc_proofs() {
-    let fixture = setup_with_threshold(100_000_000_000, NOTIONAL);
-    let id = fixture.create_position();
-    fixture.move_to_expiry_with_price(SETTLEMENT_PRICE);
-    fixture.engine().settle_position(&fixture.other, &id);
-    fixture.anchor_compliance_proofs();
-
-    assert_eq!(
-        fixture.engine().claim_payout(&fixture.user, &id),
-        EXPECTED_PAYOUT
-    );
-    assert_eq!(
-        fixture.engine().withdraw_principal(&fixture.user, &id),
-        AMOUNT
     );
 }
 
@@ -455,4 +368,176 @@ fn unsupported_market_is_rejected() {
         &DURATION,
         &None,
     );
+}
+
+#[test]
+fn capped_depeg_claim_and_principal_return_preserve_reserve_accounting() {
+    let fixture = setup(100_000_000_000);
+    let id = fixture.create_position();
+    fixture.move_to_expiry_with_price(80_000_000);
+    let settled = fixture.engine().settle_position(&fixture.other, &id);
+    assert_eq!(settled.payout, MAX_PAYOUT);
+    let state = fixture.reserve_vault().get_pool(&fixture.payout_asset);
+    assert_eq!(state.locked_liabilities, 0);
+    assert_eq!(state.reserved_claims, MAX_PAYOUT);
+    assert_eq!(
+        state.total_assets,
+        fixture.payout_token().balance(&fixture.reserve_vault_id)
+    );
+    fixture.engine().withdraw_principal(&fixture.user, &id);
+    assert_eq!(
+        fixture.engine().claim_payout(&fixture.user, &id),
+        MAX_PAYOUT
+    );
+    let state = fixture.reserve_vault().get_pool(&fixture.payout_asset);
+    assert_eq!(state.reserved_claims, 0);
+    assert_eq!(
+        state.total_assets,
+        fixture.payout_token().balance(&fixture.reserve_vault_id)
+    );
+    assert_eq!(
+        fixture.protected_token().balance(&fixture.user),
+        100_000_000_000
+    );
+}
+
+#[test]
+fn delayed_settlement_retains_expiry_price_after_recent_ring_rollover() {
+    let fixture = setup(100_000_000_000);
+    let id = fixture.create_position();
+    fixture.move_to_expiry_with_price(SETTLEMENT_PRICE);
+    for offset in 1..=70 {
+        fixture
+            .env
+            .ledger()
+            .set_timestamp(1_000 + DURATION + offset);
+        fixture.submit_price(1_000 + DURATION + offset, HIGH_PRICE);
+    }
+    let settled = fixture.engine().settle_position(&fixture.other, &id);
+    assert_eq!(settled.settlement_price, SETTLEMENT_PRICE);
+    assert_eq!(settled.payout, EXPECTED_PAYOUT);
+}
+
+#[test]
+fn stale_entry_cannot_sell_protection() {
+    let fixture = setup(100_000_000_000);
+    fixture.env.ledger().set_timestamp(4_601);
+    assert_eq!(
+        fixture.engine().try_quote_position(
+            &fixture.protected_asset,
+            &fixture.payout_asset,
+            &AMOUNT,
+            &DURATION,
+        ),
+        Err(Ok(super::EngineError::StaleOraclePrice.into()))
+    );
+}
+
+#[test]
+fn oracle_pair_must_match_engine_assets() {
+    let fixture = setup(100_000_000_000);
+    let id = fixture.env.register(ProtectionEngine, ());
+    let engine = ProtectionEngineClient::new(&fixture.env, &id);
+    assert_eq!(
+        engine.try_initialize(
+            &fixture.admin,
+            &fixture.protected_vault_id,
+            &fixture.reserve_vault_id,
+            &fixture.oracle_id,
+            &fixture.payout_asset,
+            &fixture.protected_asset,
+            &1_000,
+            &3_600,
+        ),
+        Err(Ok(super::EngineError::OracleMarketMismatch.into()))
+    );
+}
+
+#[test]
+fn same_token_protection_and_payout_is_rejected() {
+    let fixture = setup(100_000_000_000);
+    let id = fixture.env.register(ProtectionEngine, ());
+    let engine = ProtectionEngineClient::new(&fixture.env, &id);
+    assert!(engine
+        .try_initialize(
+            &fixture.admin,
+            &fixture.protected_vault_id,
+            &fixture.reserve_vault_id,
+            &fixture.oracle_id,
+            &fixture.protected_asset,
+            &fixture.protected_asset,
+            &1_000,
+            &3_600,
+        )
+        .is_err());
+}
+
+#[test]
+fn incompatible_token_decimals_are_rejected() {
+    let fixture = setup(100_000_000_000);
+    let six_decimal_asset = fixture.env.register(SixDecimalToken, ());
+    let id = fixture.env.register(ProtectionEngine, ());
+    let engine = ProtectionEngineClient::new(&fixture.env, &id);
+    assert_eq!(
+        engine.try_initialize(
+            &fixture.admin,
+            &fixture.protected_vault_id,
+            &fixture.reserve_vault_id,
+            &fixture.oracle_id,
+            &six_decimal_asset,
+            &fixture.payout_asset,
+            &1_000,
+            &3_600,
+        ),
+        Err(Ok(super::EngineError::InvalidTokenDecimals.into()))
+    );
+}
+
+#[test]
+fn real_engine_authorizes_vault_calls_without_mocking_engine_auth() {
+    let fixture = setup(100_000_000_000);
+    let quote = fixture.engine().quote_position(
+        &fixture.protected_asset,
+        &fixture.payout_asset,
+        &AMOUNT,
+        &DURATION,
+    );
+    fixture.env.mock_auths(&[MockAuth {
+        address: &fixture.user,
+        invoke: &MockAuthInvoke {
+            contract: &fixture.engine_id,
+            fn_name: "create_position",
+            args: (
+                &fixture.user,
+                &fixture.protected_asset,
+                &fixture.payout_asset,
+                AMOUNT,
+                DURATION,
+                None::<Address>,
+            )
+                .into_val(&fixture.env),
+            sub_invokes: &[
+                MockAuthInvoke {
+                    contract: &fixture.protected_asset,
+                    fn_name: "transfer",
+                    args: (&fixture.user, &fixture.protected_vault_id, AMOUNT)
+                        .into_val(&fixture.env),
+                    sub_invokes: &[],
+                },
+                MockAuthInvoke {
+                    contract: &fixture.payout_asset,
+                    fn_name: "transfer",
+                    args: (&fixture.user, &fixture.reserve_vault_id, quote.total_due)
+                        .into_val(&fixture.env),
+                    sub_invokes: &[],
+                },
+            ],
+        },
+    }]);
+    let id = fixture.create_position();
+    assert_eq!(
+        fixture.reserve_vault().get_locked_for_position(&id),
+        MAX_PAYOUT
+    );
+    assert_eq!(fixture.protected_vault().get_position_balance(&id), AMOUNT);
 }

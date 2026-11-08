@@ -69,6 +69,78 @@ fn setup() -> Fixture {
 }
 
 #[test]
+fn spoofed_engine_cannot_lock_or_settle_reserve() {
+    let fixture = setup();
+    let before = fixture.vault().get_pool(&fixture.token);
+    fixture.env.set_auths(&[]);
+    // Supplying the right address is not authorization from that address.
+    assert!(fixture
+        .vault()
+        .try_settle_position(&fixture.engine, &fixture.user, &1, &1)
+        .is_err());
+    assert!(fixture
+        .vault()
+        .try_lock_payout_capacity(&fixture.engine, &fixture.token, &fixture.token, &2, &1,)
+        .is_err());
+    assert_eq!(fixture.vault().get_pool(&fixture.token), before);
+}
+
+#[test]
+fn spoofed_engine_cannot_consume_user_premium_or_claim() {
+    let fixture = setup();
+    fixture
+        .vault()
+        .settle_position(&fixture.engine, &fixture.user, &1, &100_000_000);
+    let before = fixture.balance(&fixture.user);
+    fixture.env.set_auths(&[]);
+    assert!(fixture
+        .vault()
+        .try_collect_premium_from(
+            &fixture.engine,
+            &fixture.user,
+            &fixture.token,
+            &100_000_000,
+            &500_000,
+            &2,
+            &None,
+        )
+        .is_err());
+    assert!(fixture
+        .vault()
+        .try_claim_payout(&fixture.engine, &fixture.user, &1)
+        .is_err());
+    assert_eq!(fixture.balance(&fixture.user), before);
+    assert_eq!(
+        fixture.vault().get_pool(&fixture.token).reserved_claims,
+        100_000_000
+    );
+}
+
+#[test]
+fn spoofed_reward_caller_cannot_drain_automation() {
+    let fixture = setup();
+    fixture
+        .vault()
+        .fund_automation(&fixture.provider, &fixture.token, &1_000_000);
+    let before = fixture.vault().get_pool(&fixture.token);
+    fixture.env.set_auths(&[]);
+    for caller in [&fixture.engine, &fixture.oracle] {
+        assert!(fixture
+            .vault()
+            .try_pay_keeper(
+                caller,
+                &fixture.token,
+                &fixture.user,
+                &Symbol::new(&fixture.env, "settlement"),
+                &7,
+                &100_000,
+            )
+            .is_err());
+    }
+    assert_eq!(fixture.vault().get_pool(&fixture.token), before);
+}
+
+#[test]
 fn premium_split_is_conserved_and_visible() {
     let fixture = setup();
     let vault = fixture.vault();

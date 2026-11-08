@@ -127,12 +127,14 @@ fn require_admin(env: &Env, caller: &Address) {
 }
 
 fn require_engine(env: &Env, caller: &Address) {
+    caller.require_auth();
     if *caller != read_address(env, DataKey::Engine) {
         panic_with_error!(env, ReserveError::NotAuthorized);
     }
 }
 
 fn require_reward_caller(env: &Env, caller: &Address) {
+    caller.require_auth();
     let engine = read_address(env, DataKey::Engine);
     let oracle = read_address(env, DataKey::Oracle);
     if *caller != engine && *caller != oracle {

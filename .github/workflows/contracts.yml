@@ -1,0 +1,34 @@
+name: Contract verification
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust target and formatter
+        run: rustup target add wasm32v1-none && rustup component add rustfmt
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      - name: Test all workspace contracts
+        run: cargo test --workspace --locked
+      - name: Check testnet deployment boundary
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
+      - name: Build only pilot contracts
+        run: cargo build --locked --release --target wasm32v1-none -p protection_engine -p reserve_vault -p protected_balance_vault -p oracle_adapter
+      - name: Record pilot WASM hashes
+        run: sha256sum target/wasm32v1-none/release/{protection_engine,reserve_vault,protected_balance_vault,oracle_adapter}.wasm > pilot-wasm-sha256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: testnet-pilot-wasm
+          path: |
+            target/wasm32v1-none/release/protection_engine.wasm
+            target/wasm32v1-none/release/reserve_vault.wasm
+            target/wasm32v1-none/release/protected_balance_vault.wasm
+            target/wasm32v1-none/release/oracle_adapter.wasm
+            pilot-wasm-sha256.txt

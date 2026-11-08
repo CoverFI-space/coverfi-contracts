@@ -24,9 +24,9 @@ Premium assigned to underwriting matures according to settlement rules. Paid cla
 
 ## Payout denomination and oracle risk
 
-If the protected coin and payout coin are both USDC, payout purchasing power falls during a USDC depeg. A nominal 60 USDC payout at USD 0.94 is worth USD 56.40. The legacy engine's price-difference formula assumes the quote currency and payout units align; using a depegging payout token requires explicit conversion semantics. The one-market release must resolve and test this before a pilot claims USD loss protection. A different settlement asset introduces its own issuer, liquidity and depeg risks. Publish the chosen specification and cap; do not silently switch assets.
+The current source enforces a payout token distinct from the protected USDC test asset, with seven decimals on both sides. Prices mean payout-token units per protected token, scaled by 1e8; premiums and claims are in payout-token units. The pilot models a worthless test payout unit as a quote unit, not a redeemable USD asset. Same-token USDC depeg payout is rejected. A separate payout asset would introduce its own issuer, liquidity and depeg risks in any real-value product; no guaranteed dollar reimbursement is claimed.
 
-The current local price path trusts an admin publisher; the older public source uses an adapter. Neither source presence nor a quorum contract proves independent deployed oracle operation. Freeze a source revision, disclose authority and backfill policy, and test missing/stale/manipulated observations. Price correctness and correlated losses remain risks even with maximum payouts collateralized.
+The source uses a market-bound oracle adapter, not the separate local single-admin feed. Two matching authorized fallback publishers can accept a price; the configured upstream source is also trusted when refreshed. Quorum independence, timestamps and price accuracy are operational trust assumptions. Historical expiry buckets avoid quote-ring eviction, but missing observations still leave collateral locked. See TESTNET_RELEASE.md and THREAT_MODEL.md for the exact policy, tests and limitations.
 
 ## Months 3 to 12
 

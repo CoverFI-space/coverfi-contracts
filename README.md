@@ -1,122 +1,45 @@
-# CoverFi Smart Contracts (Open Source)
+# CoverFi testnet protection contracts
 
-## Current funding revision - 8 November 2026
+One protected USDC test asset, one distinct test payout token, and four pilot contracts: protection_engine, reserve_vault, protected_balance_vault and oracle_adapter. **Testnet only. No mainnet deployment is claimed.**
 
-The proposed grant now covers **one USDC testnet protection market**, not the broader product suite below. Mainnet is not recorded as deployed. No current deployment, LP capital or partner integration is verified by this revision.
+This source revision has not been deployed or matched to historical contract IDs. It changes initialization ABIs and requires a fresh suite, client compatibility checks, reserve seed and on-chain smoke verification before activation. Do not repoint existing funded reserves or open positions to it.
 
-- [Funding scope and architecture](FUNDING_SCOPE.md)
-- [Revised SCF application answers](SCF_APPLICATION_REVISED.md)
-- [Evidence and release status](PROJECT_STATUS.md)
+## Source and verification
+
+- [Code changes, payout units, oracle policy and compatibility](TESTNET_RELEASE.md)
+- [Threat model and remaining limitations](THREAT_MODEL.md)
+- [Evidence and deployment status](PROJECT_STATUS.md)
+- [Historical registry: unverified IDs](contracts.json)
+
+The default Cargo members and pilot deployment tool include only the four contracts above. Username registry, receipt registry and ZK verifier remain as legacy workspace source, outside the funded release. The engine no longer calls a proof verifier. Three other contracts mentioned in older architecture materials exist only in a separate local workspace and are not claimed as public release evidence.
+
+## Test and build
+
+```sh
+cargo test --locked
+cargo test --workspace --locked
+python -m unittest discover -s scripts -p 'test_*.py'
+cargo build --locked --release --target wasm32v1-none -p protection_engine -p reserve_vault -p protected_balance_vault -p oracle_adapter
+```
+
+The first command tests the pilot; --workspace also tests legacy contracts. Local verification on 8 November 2026 passed 51 workspace unit tests (33 in the pilot) and 7 deployment-boundary tests. GitHub Actions builds the four WASMs and publishes hashes/artifacts. This is not an audit or an on-chain pilot result.
+
+## Deployment
+
+Use the field template in scripts/pilot-config.example.json, replacing placeholders with verified testnet public addresses and a local Stellar CLI identity alias. No private keys belong in that file.
+
+```sh
+python scripts/deploy_testnet.py --config pilot-config.local.json
+```
+
+This is a dry-run. Explicit --execute signs testnet deployment/initialization transactions. The runner uses a fixed testnet RPC/passphrase and refuses other networks; it never automatically activates registry IDs. It does not seed reserves or submit price observations. See TESTNET_RELEASE.md for the complete verification boundary.
+
+## Funding revision
+
+- [Focused USD 40,000 / 12-week scope](FUNDING_SCOPE.md)
+- [Updated application answers](SCF_APPLICATION_REVISED.md)
 - [Business and sustainability plan](BUSINESS_PLAN.md)
 - [AI assistance disclosure](AI_DISCLOSURE.md)
-- [Historical deployment registry](contracts.json)
+- [Response to voter feedback](REVIEW_RESPONSE.md)
 
-The seven-crate source and implementation notes below describe the legacy workspace. They do not establish a finished minimal depeg release or a source-to-deployment match. Additional local-only product contracts are excluded from this ask. Do not call this code independently audited without a linked audit report.
-
-
-CoverFi is a stablecoin loss-protection and payment protocol for Stellar/Soroban. This workspace contains the open-source smart contracts and tests; it does not include frontend, backend, or AI logic.
-
-## Contracts
-
-- `protection_engine`: Main user-facing contract. It quotes protection, creates positions, locks maximum payout capacity, settles only after expiry, and coordinates payout claims plus protected-principal withdrawals.
-- `protected_balance_vault`: Holds protected principal by position ID. Only the configured protection engine can instruct deposits and withdrawals.
-- `reserve_vault`: Holds reserve liquidity, mints provider shares, collects premiums, locks position-specific maximum payout capacity, matures unused underwriting premium, records claimable payouts, pays keepers, and manages withdrawal requests.
-- `oracle_adapter`: Stores fresh and historical scaled price observations, with source reads and fallback publisher quorum support.
-- `username_registry`: Maps lowercase CoverFi usernames to Stellar addresses with paid leases, expiry, renewal, rename, and release behavior.
-- `receipt_registry`: Stores receipt proof metadata, rejects duplicate payment hashes, grants receipt access, anchors receipt batches, and links disputes to receipt records.
-- `zk_verifier`: Anchors account-bound proof status, registers circuit verifier hashes, exposes subject proof lookups, and includes a BN254 pairing-check entry point for Protocol 25 verifier integrations.
-
-## V2 Protection Flow
-
-For a user protecting `1000` units of XLM principal with a CFTUSD payout asset:
-
-1. The user calls `protection_engine.quote_position`.
-2. The quote records the current fresh oracle price as the entry price and returns maximum payout, premium components, utilization, concentration, volatility, safety margin, automation fee, and total due.
-3. The user calls `protection_engine.create_position`.
-4. Protected principal moves from the user to `protected_balance_vault`.
-5. The premium and automation fee move to `reserve_vault`.
-6. `reserve_vault` locks the position-specific maximum payout in CFTUSD.
-7. The position is stored as `Active` until expiry.
-
-Prices use 8-decimal scaling:
-
-```txt
-1.00 = 100_000_000
-0.98 = 98_000_000
-0.94 = 94_000_000
-```
-
-After expiry, anyone can call `settle_position`. The engine reads the latest valid observation at or immediately before expiry:
-
-```txt
-loss = entry_price - settlement_price
-payout = protected_amount * loss / 100_000_000
-final_payout = min(payout, maximum_payout)
-```
-
-If no valid expiry observation exists, the position moves to `AwaitingOracle` and can be settled later once an eligible observation is available. If the payout is greater than zero, the owner can call `claim_payout`; the owner can withdraw protected XLM principal after settlement through `withdraw_principal`.
-
-## Interaction Order
-
-1. Build and deploy all seven contracts.
-2. Initialize `oracle_adapter` with source, fallback publishers, and oracle policy.
-3. Initialize `reserve_vault` with admin and treasury, then configure engine/oracle references after the engine address is known.
-4. Initialize `protected_balance_vault` with admin and engine address.
-5. Initialize `protection_engine` with admin, vault addresses, oracle address, protected asset, payout asset, max payout bps, and max oracle age.
-6. Initialize `username_registry`, `receipt_registry`, and `zk_verifier`.
-7. Fund reserve liquidity with CFTUSD and fund the automation balance.
-8. Refresh oracle observations.
-9. Users create protection through `create_position`.
-10. Anyone settles expired positions through `settle_position`.
-11. Owners claim payouts and withdraw principal through `claim_payout` and `withdraw_principal`.
-12. Reserve providers use `request_withdraw`, `cancel_withdraw`, and `execute_withdraw`.
-
-## Treasury And Protocol Fee Routing
-
-The V2 reserve vault routes the protocol-fee portion automatically during `collect_premium_from`, which is called by `protection_engine.create_position`. This means the treasury transfer happens in the same signed position-creation flow as the user premium payment.
-
-Default routing is:
-
-| Bucket | Default |
-| --- | --- |
-| Underwriting | `7800` bps of risk premium |
-| Protocol treasury | `1200` bps of risk premium |
-| Safety | `700` bps of risk premium |
-| Automation remainder | `300` bps of risk premium plus fixed automation fee |
-
-The admin can update the treasury wallet with `reserve_vault.set_treasury(admin, treasury)` and can set the protocol fee between `1000` and `1500` bps with `reserve_vault.set_protocol_fee_bps(admin, fee_bps)`. Approved partners receive their reward from the protocol-fee bucket before the remaining protocol amount is sent to treasury.
-
-The current published testnet contract IDs were initialized before these controls existed. To use them on-chain, deploy or upgrade the V2 reserve and protection contracts, initialize the reserve vault with the intended treasury public key, then publish the fresh contract IDs after a smoke test.
-
-## Running Tests
-
-From this folder:
-
-```powershell
-cargo test --workspace
-```
-
-If Windows Application Control blocks generated Rust build scripts or test binaries, run the same command from a developer-trusted folder, a trusted CI runner, or an environment where the generated binaries are allowed. A policy error such as `4551` is a host execution-policy block, not a contract assertion failure.
-
-## Building Contracts
-
-Install the Stellar CLI and Rust target, then build the workspace:
-
-```powershell
-rustup target add wasm32v1-none
-cargo build --workspace --release --target wasm32v1-none
-```
-
-Or build one contract at a time:
-
-```powershell
-cargo build -p protection_engine --release --target wasm32v1-none
-cargo build -p protected_balance_vault --release --target wasm32v1-none
-cargo build -p reserve_vault --release --target wasm32v1-none
-cargo build -p oracle_adapter --release --target wasm32v1-none
-cargo build -p username_registry --release --target wasm32v1-none
-cargo build -p receipt_registry --release --target wasm32v1-none
-cargo build -p zk_verifier --release --target wasm32v1-none
-```
-
-No mainnet deployment is performed by this repository. V2 Testnet IDs must be published only after a fresh deployment report and smoke test verify the full lifecycle.
+LP commitments, third-party users and a partner integration remain evidence targets. Current team underwriting experience and independent review gaps remain disclosed. Prototype prices are not actuarially validated; no guaranteed returns or USD reimbursement are claimed.

@@ -1086,7 +1086,6 @@ dependencies = [
  "protected_balance_vault",
  "reserve_vault",
  "soroban-sdk",
- "zk_verifier",
 ]
 
 [[package]]

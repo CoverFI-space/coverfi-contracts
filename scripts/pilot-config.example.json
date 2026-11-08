@@ -1,0 +1,14 @@
+{
+  "network": "testnet",
+  "source_account": "YOUR_LOCAL_STELLAR_IDENTITY_ALIAS",
+  "admin": "<TESTNET_ADMIN_PUBLIC_KEY>",
+  "treasury": "<TESTNET_TREASURY_PUBLIC_KEY>",
+  "publisher1": "<TESTNET_PUBLISHER_1_PUBLIC_KEY>",
+  "publisher2": "<TESTNET_PUBLISHER_2_PUBLIC_KEY>",
+  "publisher3": "<TESTNET_PUBLISHER_3_PUBLIC_KEY>",
+  "protected_asset": "<VERIFIED_USDC_TEST_ASSET_CONTRACT>",
+  "payout_asset": "<DISTINCT_SEVEN_DECIMAL_TEST_PAYOUT_CONTRACT>",
+  "oracle_source": "<TESTNET_SOURCE_CONTRACT>",
+  "source_asset": "USDC",
+  "source_decimals": 8
+}

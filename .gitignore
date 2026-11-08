@@ -6,3 +6,9 @@
 *.ps1
 .stellar/
 .env
+
+# Auto-generated test outputs and local pilot configuration
+**/test_snapshots/
+**/__pycache__/
+pilot-config.local.json
+artifacts/pilot-testnet-deployment.generated.json

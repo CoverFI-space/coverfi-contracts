@@ -23,7 +23,16 @@ fn setup() -> Fixture {
     let publisher3 = Address::generate(&env);
     let contract = env.register(OracleAdapter, ());
     let client = OracleAdapterClient::new(&env, &contract);
-    client.initialize(&admin, &source, &Symbol::new(&env, "XLM"), &8, &600, &2_000);
+    client.initialize(
+        &admin,
+        &source,
+        &Symbol::new(&env, "USDC"),
+        &8,
+        &600,
+        &2_000,
+        &asset,
+        &Address::generate(&env),
+    );
     client.configure_publishers(&admin, &publisher1, &publisher2, &publisher3, &true);
     Fixture {
         env,
@@ -96,4 +105,112 @@ fn reconfiguration_revokes_old_publishers() {
     fixture
         .client
         .submit_fallback(&fixture.publisher1, &fixture.asset, &19_000_000, &1_000);
+}
+
+#[test]
+fn single_publisher_cannot_create_a_price() {
+    let fixture = setup();
+    assert!(!fixture.client.submit_fallback(
+        &fixture.publisher1,
+        &fixture.asset,
+        &100_000_000,
+        &1_000
+    ));
+    assert_eq!(fixture.client.get_fresh_price(&fixture.asset), None);
+}
+
+#[test]
+fn future_and_nonpositive_votes_are_rejected_before_quorum() {
+    let fixture = setup();
+    assert_eq!(
+        fixture.client.try_submit_fallback(
+            &fixture.publisher1,
+            &fixture.asset,
+            &100_000_000,
+            &1_001,
+        ),
+        Err(Ok(OracleError::FuturePrice.into()))
+    );
+    assert_eq!(
+        fixture
+            .client
+            .try_submit_fallback(&fixture.publisher1, &fixture.asset, &0, &1_000,),
+        Err(Ok(OracleError::InvalidPrice.into()))
+    );
+}
+
+#[test]
+fn configured_feed_cannot_be_written_under_another_asset() {
+    let fixture = setup();
+    let unrelated = Address::generate(&fixture.env);
+    assert_eq!(
+        fixture
+            .client
+            .try_submit_fallback(&fixture.publisher1, &unrelated, &100_000_000, &1_000,),
+        Err(Ok(OracleError::UnsupportedAsset.into()))
+    );
+}
+
+#[test]
+fn publisher_rotation_cannot_reuse_votes_from_previous_epoch() {
+    let fixture = setup();
+    assert!(!fixture.client.submit_fallback(
+        &fixture.publisher1,
+        &fixture.asset,
+        &100_000_000,
+        &1_000
+    ));
+    let replacement = Address::generate(&fixture.env);
+    fixture.client.configure_publishers(
+        &fixture.admin,
+        &fixture.publisher1,
+        &fixture.publisher2,
+        &replacement,
+        &true,
+    );
+    assert!(!fixture.client.submit_fallback(
+        &fixture.publisher2,
+        &fixture.asset,
+        &100_000_000,
+        &1_000
+    ));
+    assert_eq!(fixture.client.get_latest(&fixture.asset), None);
+    assert!(fixture.client.submit_fallback(
+        &fixture.publisher1,
+        &fixture.asset,
+        &100_000_000,
+        &1_000
+    ));
+}
+
+#[test]
+fn historical_lookup_excludes_post_expiry_and_stale_observations() {
+    let fixture = setup();
+    for publisher in [&fixture.publisher1, &fixture.publisher2] {
+        fixture
+            .client
+            .submit_fallback(publisher, &fixture.asset, &100_000_000, &1_000);
+    }
+    fixture.env.ledger().set_timestamp(1_100);
+    for publisher in [&fixture.publisher1, &fixture.publisher2] {
+        fixture
+            .client
+            .submit_fallback(publisher, &fixture.asset, &94_000_000, &1_100);
+    }
+    assert_eq!(
+        fixture
+            .client
+            .get_price_at_or_before(&fixture.asset, &1_050, &600)
+            .unwrap()
+            .price,
+        100_000_000
+    );
+    fixture.env.ledger().set_timestamp(1_701);
+    assert_eq!(
+        fixture
+            .client
+            .get_price_at_or_before(&fixture.asset, &1_701, &600),
+        None
+    );
+    assert_eq!(fixture.client.get_fresh_price(&fixture.asset), None);
 }

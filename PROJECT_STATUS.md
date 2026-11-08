@@ -4,7 +4,7 @@ Reviewed 8 November 2026. This is a source/documentation review, not an audit or
 
 | Item | Evidence and limitation |
 | --- | --- |
-| Public source | Seven crates in this repository's Cargo workspace. |
+| Public source | Seven crates in the workspace; only four pilot contracts are default members and selected by the pilot runner. |
 | Local-only source | A separate local workspace contains quorum_oracle_source, payment_lock_engine and floor_shield_engine. Their implementation is not evidence in this public release. |
 | Mainnet | No verified deployment supplied. Mainnet is recorded as not deployed; unsigned deployment artifacts are not a deployment. |
 | Testnet | Historical IDs are in contracts.json. They have not been revalidated for this revision or matched to this public source revision. |
@@ -17,9 +17,9 @@ Reviewed 8 November 2026. This is a source/documentation review, not an audit or
 
 ## Public-source versus local-source drift
 
-The published protection_engine uses oracle_adapter and contains an optional high-value zk_verifier check. The separate local engine uses admin-submitted price observations. Historical deployed IDs cannot be assumed to implement either revision without WASM hash and configuration checks.
+The current public protection_engine uses the market-bound oracle_adapter and has no zk_verifier dependency. Its initialization ABI differs from the prior public release. The separate local engine uses admin-submitted price observations. Historical deployed IDs cannot be assumed to implement either revision without WASM hash and configuration checks.
 
-The new funding scope is one USDC testnet market. It does not mean that market has been deployed or validated. Narrowing the source into a minimal release, removing the proof dependency, and verifying the payout denomination are milestone work. Do not describe the seven-crate legacy workspace as a finished minimal depeg engine.
+The new funding scope is one USDC testnet market. It does not mean that market has been deployed or validated. The default four-contract source release now removes the proof dependency, enforces distinct seven-decimal tokens and specifies payout-token denomination. A fresh on-chain deployment and client compatibility verification remain outstanding. Do not describe the seven-crate legacy workspace as a finished minimal depeg engine.
 
 ## Reviewer evidence checklist
 
@@ -31,3 +31,7 @@ The new funding scope is one USDC testnet market. It does not mean that market h
 - Current CI run and independent review scope/report. Old test totals are historical claims until reproduced.
 
 Canonical registry: https://github.com/CoverFI-space/coverfi-contracts/blob/main/contracts.json
+
+## Code verification update
+
+The current code passed 51 workspace unit tests (33 pilot tests) and 7 Python deployment-boundary tests locally on 8 November 2026. The earlier Cargo-cache permission failure was resolved. See TESTNET_RELEASE.md and the release commit CI for build evidence. No live deployment or balances are attested by these tests.

@@ -12,7 +12,7 @@ CoverFi is narrowing its grant request to one USDC testnet protection market on 
 
 This grant does not fund username registration, receipts, payment locks, floor shields, ZK verification, protected invoice APIs or an AI assistant. These are legacy or separate experiments. One partner will integrate the core quote/open/settle experience rather than a new invoice platform.
 
-The pilot will validate the reference-price and payout-denomination specification, reserve reconciliation, stale-oracle behavior and the complete purchase-to-claim lifecycle. It is testnet-only. Mainnet launch is outside this request.
+The source now defines prices and claims in a distinct seven-decimal test payout token, binds the oracle pair and removes the proof dependency. The pilot will validate that specification on-chain, reserve reconciliation, stale-oracle behavior and the complete purchase-to-claim lifecycle. It is testnet-only. Mainnet launch is outside this request.
 
 ## Requested budget
 
@@ -36,13 +36,13 @@ The organization publishes seven repositories at https://github.com/CoverFI-spac
 
 The team reports receiving more than USD 1,000 from Stellar Build Delhi, formal founder communications with Tael and Fianza/Finza, and product trials by those contacts. Award/payment evidence, exact amount, partner name confirmation and public testing evidence remain to be attached. We do not claim signed LP commitments, a live partner integration, verified third-party protection activity, paid volume or mainnet deployment.
 
-Historical testnet IDs and their limitations are published at https://github.com/CoverFI-space/coverfi-contracts/blob/main/contracts.json. Historical smoke tests and old test counts do not establish current deployment health or correspondence to current source. A fresh release must publish source commit, WASM hashes, initialized settings, reserve state and end-to-end transaction evidence.
+Historical testnet IDs and their limitations are published at https://github.com/CoverFI-space/coverfi-contracts/blob/main/contracts.json. Historical smoke tests and old test counts do not establish current deployment health or correspondence to current source. The source now passes 51 workspace unit tests and 7 deployment-boundary tests locally; CI records the four-contract build. Before activation, publish source commit, WASM hashes, initialized settings, reserve state and end-to-end transaction evidence.
 
 ## Tranche 1 - focused specification and reproducible release
 
 Weeks 1-3 from project start; USD 12,000.
 
-Outcome: a reviewer can reproduce a minimal one-market build and explain exactly when it pays. Publish the selected asset/issuer, payout denomination and conversion semantics, expiry-based trigger, payout cap, permitted durations, premium breakdown and oracle/backfill policy. Remove optional proof gating from the funded engine release and exclude unrelated product surfaces from the release manifest.
+Outcome: a reviewer can reproduce a minimal one-market build and explain exactly when it pays. Publish the selected asset/issuer, payout denomination and conversion semantics, expiry-based trigger, payout cap, permitted durations, premium breakdown and oracle/backfill policy. Revalidate the now proof-free four-contract release, confirm client compatibility and keep unrelated product surfaces outside the release manifest.
 
 Acceptance evidence: tagged source commit, reproducible build instructions, current CI output, payout examples, reserve/claim invariants, stale/missing-price tests and a reconciled testnet lifecycle with transaction hashes. Publish no-payout, positive-payout, cap, duplicate-claim and withdrawal-safety cases. Build success alone is insufficient.
 

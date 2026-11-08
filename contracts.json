@@ -50,5 +50,20 @@
     "Historical IDs include local-only experimental code not present in the public workspace.",
     "The local registry contains a July smoke-test date preceding August redeploy notes; that smoke test does not verify the later IDs.",
     "All testnet tokens have no monetary value."
-  ]
+  ],
+  "pilotRelease": {
+    "network": "testnet",
+    "status": "source_tested_not_deployed",
+    "contracts": [
+      "protection_engine",
+      "reserve_vault",
+      "protected_balance_vault",
+      "oracle_adapter"
+    ],
+    "sourceDetails": "TESTNET_RELEASE.md",
+    "wasmHashes": null,
+    "activeContractIds": null,
+    "smokeTestedAt": null,
+    "localBuildRecord": "artifacts/pilot-local-build.json"
+  }
 }

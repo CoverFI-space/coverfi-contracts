@@ -1,0 +1,26 @@
+{
+  "network": "testnet",
+  "status": "built_not_deployed",
+  "builtOn": "2026-11-08",
+  "target": "wasm32v1-none",
+  "profile": "release",
+  "contracts": {
+    "protection_engine": {
+      "sha256": "ed0fb75b786fabf5780665438fe39d109d7c75536a16c9c549ca54036619d20a",
+      "bytes": 42137
+    },
+    "reserve_vault": {
+      "sha256": "dbe8b30604c5cc48d34f8cf38e9c35b8ba00b4a6a31368470332f5f66c309b53",
+      "bytes": 49336
+    },
+    "protected_balance_vault": {
+      "sha256": "be7a2e12742306b9aa41fa799cc545380769525cd7513dbc57b8390726abb209",
+      "bytes": 12888
+    },
+    "oracle_adapter": {
+      "sha256": "b101f908eb493994eb29c8495692f45157264717cb252c6e63309585f2057d7a",
+      "bytes": 32275
+    }
+  },
+  "note": "Local build hashes; GitHub Actions publishes artifacts for its exact commit. No live deployment is claimed."
+}
