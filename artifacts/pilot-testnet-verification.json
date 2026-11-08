@@ -1,0 +1,182 @@
+{
+  "network": "testnet",
+  "wasmHashes": {
+    "oracle_adapter": "edff139dd9e15e4bf170f7575ba15fb1c8111f83d817dc17efcce65fa743a5d5",
+    "reserve_vault": "dbe8b30604c5cc48d34f8cf38e9c35b8ba00b4a6a31368470332f5f66c309b53",
+    "protected_balance_vault": "be7a2e12742306b9aa41fa799cc545380769525cd7513dbc57b8390726abb209",
+    "protection_engine": "ed0fb75b786fabf5780665438fe39d109d7c75536a16c9c549ca54036619d20a"
+  },
+  "transactions": [
+    {
+      "hash": "089a9f3a7cbe15b810ed6032ab42830e879d5057908d8a11d15025f7bd54bee3",
+      "status": "SUCCESS",
+      "ledger": 5627495
+    },
+    {
+      "hash": "0ce717845ae17671dee76bf65c4d4fa137e67476814790142b19414ee5d152bb",
+      "status": "SUCCESS",
+      "ledger": 5627531
+    },
+    {
+      "hash": "14836f420b7eca228936ab9ec1f2c6dcc2ec954b3b3377837a8cdb6d60e04506",
+      "status": "SUCCESS",
+      "ledger": 5627628
+    },
+    {
+      "hash": "15cd3b1a4776e88e1a8f5dc51d47e651503a5095bc6dafb8e3afc2701cef619a",
+      "status": "SUCCESS",
+      "ledger": 5627537
+    },
+    {
+      "hash": "172df7b2f99e2a68e3052b8930f06758a3256b0a3a718de88ce90cc593eaff2c",
+      "status": "SUCCESS",
+      "ledger": 5627526
+    },
+    {
+      "hash": "205b96e5a34702b256c8fab9989f4c5f14fa186b2b9251b2476a437e4979e9db",
+      "status": "SUCCESS",
+      "ledger": 5627580
+    },
+    {
+      "hash": "357e172e264462ce9c19ad5ecf0b1c30597f96db70506618bc01b4ff26a15fe4",
+      "status": "SUCCESS",
+      "ledger": 5627543
+    },
+    {
+      "hash": "3bbee00668ccfdd6ccf87fa80ff72dea8d6a8f007bd1b7d7524452bd9cd7691d",
+      "status": "SUCCESS",
+      "ledger": 5627648
+    },
+    {
+      "hash": "43661dd92f73e14b43ff361e895be91c769efa1253a39be9e7a0ccaa07e008a2",
+      "status": "SUCCESS",
+      "ledger": 5627674
+    },
+    {
+      "hash": "43b000f301419399b8029ef91a214aa11352362e35c039ae033670eeea733b19",
+      "status": "SUCCESS",
+      "ledger": 5627456
+    },
+    {
+      "hash": "476ab0c0dc420af67938da05e3cf0b2c8af4b67ddd16ec43305e2b2c566d6b6a",
+      "status": "SUCCESS",
+      "ledger": 5627507
+    },
+    {
+      "hash": "5c2c28604fcdeba081ae96b440478f88e3c64e10e8e8b5d6ed92e2614d644a7a",
+      "status": "SUCCESS",
+      "ledger": 5627616
+    },
+    {
+      "hash": "5fab3279565e8538d0b27ea7e243435a9ad118b4fe6ee2beb6a2bd1d193d1af8",
+      "status": "SUCCESS",
+      "ledger": 5627634
+    },
+    {
+      "hash": "64d3b014656109526c91eab8f6add472063394335214397c31168609a7c10923",
+      "status": "SUCCESS",
+      "ledger": 5627444
+    },
+    {
+      "hash": "6af09a7d6ec37b8b07cda31e995738e8f005524e37ac441222b515a57d71ae30",
+      "status": "SUCCESS",
+      "ledger": 5627552
+    },
+    {
+      "hash": "6d27219f8cbf325c03d49f4da07d753b917091d6e0f19cd71d31f1a6ba2fb3db",
+      "status": "SUCCESS",
+      "ledger": 5627502
+    },
+    {
+      "hash": "73d1ab8eaa6166bd7d02e44635c675ad00f6db38963416b81bb1ec47c1579408",
+      "status": "SUCCESS",
+      "ledger": 5627450
+    },
+    {
+      "hash": "741f82221e5e287e91bf46451f39443e738385e34090afa3165d5533cb3322b7",
+      "status": "SUCCESS",
+      "ledger": 5627547
+    },
+    {
+      "hash": "76afa6c8a57112a6d8e2c2e9eba4948148fc60f9f432faae1557b29f92d94af0",
+      "status": "SUCCESS",
+      "ledger": 5627639
+    },
+    {
+      "hash": "8e29062297e6cd63fa9c82dc5abca65f09aa9d7a383dcfe9162ad6b201a37e28",
+      "status": "SUCCESS",
+      "ledger": 5627511
+    },
+    {
+      "hash": "94c00e113f6598be97cd80ccc0473bc9165ecdb6ae91c17b76cc041ef6d3789e",
+      "status": "SUCCESS",
+      "ledger": 5627570
+    },
+    {
+      "hash": "9c48bc0ca15e52068c0e1f7895fc94e4881f3718f0e3720d193ce731aeb71202",
+      "status": "SUCCESS",
+      "ledger": 5627651
+    },
+    {
+      "hash": "a445f5f2752e6834cba138a8334ab9fef682d98e976f806f83da9ee3071b7f46",
+      "status": "SUCCESS",
+      "ledger": 5627480
+    },
+    {
+      "hash": "a7db78e869d60981c2cd5803eaa448ff655e7d3d9a7a95151ed441858ec3da56",
+      "status": "SUCCESS",
+      "ledger": 5627491
+    },
+    {
+      "hash": "a914cc99248350244a5e74d431a21fcf2260a17ffbec8de36b4b2695488217bb",
+      "status": "SUCCESS",
+      "ledger": 5627592
+    },
+    {
+      "hash": "ac7298356c11e58cd84509d3d83c938ad234fe9864a3ebe17c5526022b73cb7a",
+      "status": "SUCCESS",
+      "ledger": 5627610
+    },
+    {
+      "hash": "b8d603e7ea4917616ba52d64197c3c13501a0e5558191b4515fc558f8327506f",
+      "status": "SUCCESS",
+      "ledger": 5627587
+    },
+    {
+      "hash": "ba69df42b3c60ef1bab673d67de67928fd48addbc3d16c75c1c0660dc4754ddb",
+      "status": "SUCCESS",
+      "ledger": 5627622
+    },
+    {
+      "hash": "c0074e592bff2ecd31ae7bbaf4944f0062fa2fbd0d9d573cfd007c72f5e31e91",
+      "status": "SUCCESS",
+      "ledger": 5627475
+    },
+    {
+      "hash": "c35897171532a363b8fe4720386017ebe5330da0102c19720d4c5d32ee935256",
+      "status": "SUCCESS",
+      "ledger": 5627573
+    },
+    {
+      "hash": "d99d1b895e080374b34262e99a78238808f25602204204eff224fc249322e782",
+      "status": "SUCCESS",
+      "ledger": 5627669
+    },
+    {
+      "hash": "f01a3c398da97b78dcc0e00c6abd087236854039d34048060afd5662ea703d73",
+      "status": "SUCCESS",
+      "ledger": 5627470
+    },
+    {
+      "hash": "f6cfaf9aa7ce97b91a974e6b9c3e42c3741d49554a4f3e4b5aaa29e7d6ce7e43",
+      "status": "SUCCESS",
+      "ledger": 5627486
+    },
+    {
+      "hash": "fccda8524a2a7a6cef565d64bd48a5c999553dc13686e79c987658c3146fcf59",
+      "status": "SUCCESS",
+      "ledger": 5627462
+    }
+  ],
+  "verifiedAt": "2026-11-08T18:24:36.584069+00:00"
+}

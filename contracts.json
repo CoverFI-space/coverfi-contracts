@@ -1,9 +1,9 @@
 {
   "schemaVersion": "3.0.0",
   "project": "CoverFi",
-  "reviewedAt": "2026-11-08",
+  "reviewedAt": "2026-11-08T18:20:37.317983+00:00",
   "repository": "https://github.com/CoverFI-space/coverfi-contracts",
-  "status": "historical_records_not_revalidated",
+  "status": "testnet_smoke_verified_mock_assets",
   "fundingScope": "FUNDING_SCOPE.md",
   "publicWorkspaceCrates": [
     "protection_engine",
@@ -16,28 +16,59 @@
   ],
   "networks": {
     "testnet": {
-      "status": "unverified_historical_snapshot",
-      "lastReportedUpdate": "2026-08-23T00:00:00+05:30",
+      "status": "deployed_smoke_verified_mock_assets",
+      "rpcUrl": "https://soroban-testnet.stellar.org",
+      "networkPassphrase": "Test SDF Network ; September 2015",
+      "sourceCommit": "6e85036b236df94c550434efdbf7e9287d417921",
       "contracts": {
-        "quorumOracleSource": null,
-        "oracleAdapter": "CBAEBBX6ZJGQDWJ4HW2OXJWVGVTQ2THCVFV3O4L3UK3VFDBYW656OV47",
-        "reserveVault": "CDFEBN3QBAUVP7LBJFPUEL2ZGGKU22XH57ROVBR44YF7NATWK5VR6PFP",
-        "protectedBalanceVault": "CBS5V4JO33GD5RAIR7S4V722RSFJZTAKW3G74SZWP6U4GIVV5ADCC27Z",
-        "zkVerifier": "CBBJZABCCL6BCMJNWTOKLDO4FGCUXVRDZDWJ6CURX3KQI6VVIWAMX4AN",
-        "protectionEngine": "CDP2CF23HFMPQ4LS64OBLYNLY7WGD3JWRNL3TEYU2DCGMGZZYHLU7VMV",
-        "usernameRegistry": "CDLETXOPLYOY752OQLABBGOKN4BB2O2FQW4I222O4SH4H6CLRV2XQKTM",
-        "receiptRegistry": "CCRGWBRPQZTYPU3FEIQO4ZVQ5V4B3LAE7AQABI55APIQRL7CIQWPSSFU",
-        "paymentLockEngine": "CCVQV6QRTQULDBNQ3GPY4DBSGSHJ2VRVW5BJ5EDHDJXBQBNFNGH2WNAW",
-        "paymentLockReserveVault": "CBJNXQA535DSWNWOOUX2LEZMSWFOSFRJBHRQSVY3N3JMP64JKRSOIJQG",
-        "floorShieldEngine": "CCQ2S24ZC2BKICY5RQNJWDHEUZGBPVP73YA6HEHUY33JYYTEO3AZHJPL",
-        "floorShieldReserveVault": "CDOI47NDMAPXSNWEAQXMXG6U7ZO2RH72Y5QF5ZHYBS6AMCHZ6T5FT3P5",
-        "floorShieldProtectedVault": "CBKQM3KHXJ456MFRLNTNLUZMDLUO3MAN4F23MUKVR4Q7O5CXJFKV3LMX"
+        "oracleAdapter": "CDMP7NOSFTN77TSRN5GVXML7KQVF4P6O77C5SWF6OACHYXOZVXMHM2BA",
+        "reserveVault": "CD76MVLI3U2WP4W7WAABLXFI65P2EZXPQ7II42PG2WYIGRCL236XAVFM",
+        "protectedBalanceVault": "CBLNUMR2PE7B4EGKJ3ZH6SU2BL3EWEVEJOAVCSC4Y6MZHG7N7JMSEK3E",
+        "protectionEngine": "CDYOKZH532VB2RHVEFPBEDK3IAZNBXV6JAPHMGHI7GXKCFMECKJIREXB"
       },
-      "sourceCommit": null,
-      "wasmHashes": null,
-      "lastVerifiedAt": null,
-      "reserveFundingStatus": "historical_local_record_says_unfunded_current_state_unknown",
-      "warning": "Historical local records only. IDs are not matched to this public source and may be stale after network resets. Do not use as active configuration without ledger and WASM verification."
+      "assets": {
+        "protectedPrincipal": {
+          "symbol": "USDC",
+          "displayName": "Mock USDC (not Circle-issued)",
+          "tokenContract": "CAXJTCW55YLLJC4WUTIEHGFMZZCUP7WGDFUJXAFHSKVBGSJWTNWGOSWC",
+          "issuer": "GCW6NZYQ4G3OLKWH7XBT4FBCWJDXODGD4BVZQM4FPZOXUUOV5GQBWDHA",
+          "decimals": 7,
+          "isMock": true
+        },
+        "premiumAndPayout": {
+          "symbol": "CFUSD",
+          "displayName": "Mock test payout unit",
+          "tokenContract": "CAY3UEZ4J3XTD54HFNDOL2LSTBDZ57WK4I5S5HNI53K6YNE2BNXF6KWJ",
+          "issuer": "GCW6NZYQ4G3OLKWH7XBT4FBCWJDXODGD4BVZQM4FPZOXUUOV5GQBWDHA",
+          "decimals": 7,
+          "isMock": true
+        }
+      },
+      "wasmHashes": {
+        "oracleAdapter": "edff139dd9e15e4bf170f7575ba15fb1c8111f83d817dc17efcce65fa743a5d5",
+        "reserveVault": "dbe8b30604c5cc48d34f8cf38e9c35b8ba00b4a6a31368470332f5f66c309b53",
+        "protectedBalanceVault": "be7a2e12742306b9aa41fa799cc545380769525cd7513dbc57b8390726abb209",
+        "protectionEngine": "ed0fb75b786fabf5780665438fe39d109d7c75536a16c9c549ca54036619d20a"
+      },
+      "verifiedAt": "2026-11-08T18:20:37.317983+00:00",
+      "verificationLedger": 5627678,
+      "deploymentEvidence": "artifacts/pilot-testnet-deployment.json",
+      "smokeEvidence": "artifacts/pilot-testnet-smoke.json",
+      "oracle": {
+        "mode": "team_controlled_2_of_3_publishers",
+        "upstreamSource": null,
+        "continuousWorkerConfigured": false,
+        "pricesAreSimulated": true
+      },
+      "reserveSeed": {
+        "testReserveUnits": "1000",
+        "testAutomationUnits": "10",
+        "token": "CFUSD",
+        "realCapital": false
+      },
+      "applicationIntegration": "not_repointed_to_new_contracts",
+      "disclaimer": "All assets and activity are team-controlled testnet simulations. Mock USDC is not Circle-issued. No external LP capital, third-party traction or mainnet deployment is claimed.",
+      "verificationEvidence": "artifacts/pilot-testnet-verification.json"
     },
     "mainnet": {
       "status": "not_deployed",
@@ -46,24 +77,62 @@
     }
   },
   "limitations": [
-    "No live RPC verification was performed for this revision.",
-    "Historical IDs include local-only experimental code not present in the public workspace.",
-    "The local registry contains a July smoke-test date preceding August redeploy notes; that smoke test does not verify the later IDs.",
-    "All testnet tokens have no monetary value."
+    "Historical IDs are archived separately and remain unverified.",
+    "Smoke tests use team-controlled wallets and mock assets; they are not external demand or real reserve capital.",
+    "This verification is a timestamped snapshot. Prices are simulated and no continuous oracle worker is configured.",
+    "The existing app/backend have not been repointed to this fresh deployment.",
+    "Testnet resets and RPC transaction-history retention can make later verification unavailable.",
+    "No mainnet deployment or independent audit is claimed."
   ],
   "pilotRelease": {
     "network": "testnet",
-    "status": "source_tested_not_deployed",
+    "status": "deployed_smoke_verified_mock_assets",
+    "sourceCommit": "6e85036b236df94c550434efdbf7e9287d417921",
     "contracts": [
-      "protection_engine",
+      "oracle_adapter",
       "reserve_vault",
       "protected_balance_vault",
-      "oracle_adapter"
+      "protection_engine"
     ],
-    "sourceDetails": "TESTNET_RELEASE.md",
+    "wasmHashes": {
+      "oracle_adapter": "edff139dd9e15e4bf170f7575ba15fb1c8111f83d817dc17efcce65fa743a5d5",
+      "reserve_vault": "dbe8b30604c5cc48d34f8cf38e9c35b8ba00b4a6a31368470332f5f66c309b53",
+      "protected_balance_vault": "be7a2e12742306b9aa41fa799cc545380769525cd7513dbc57b8390726abb209",
+      "protection_engine": "ed0fb75b786fabf5780665438fe39d109d7c75536a16c9c549ca54036619d20a"
+    },
+    "activeContractIds": {
+      "oracle_adapter": "CDMP7NOSFTN77TSRN5GVXML7KQVF4P6O77C5SWF6OACHYXOZVXMHM2BA",
+      "reserve_vault": "CD76MVLI3U2WP4W7WAABLXFI65P2EZXPQ7II42PG2WYIGRCL236XAVFM",
+      "protected_balance_vault": "CBLNUMR2PE7B4EGKJ3ZH6SU2BL3EWEVEJOAVCSC4Y6MZHG7N7JMSEK3E",
+      "protection_engine": "CDYOKZH532VB2RHVEFPBEDK3IAZNBXV6JAPHMGHI7GXKCFMECKJIREXB"
+    },
+    "smokeTestedAt": "2026-11-08T18:20:37.317983+00:00",
+    "verificationLedger": 5627678,
+    "localBuildRecord": "artifacts/pilot-local-build.json",
+    "releaseUrl": "https://github.com/CoverFI-space/coverfi-contracts/releases/tag/testnet-pilot-2026-11-08"
+  },
+  "historicalTestnetSnapshot": {
+    "status": "unverified_historical_snapshot",
+    "lastReportedUpdate": "2026-08-23T00:00:00+05:30",
+    "contracts": {
+      "quorumOracleSource": null,
+      "oracleAdapter": "CBAEBBX6ZJGQDWJ4HW2OXJWVGVTQ2THCVFV3O4L3UK3VFDBYW656OV47",
+      "reserveVault": "CDFEBN3QBAUVP7LBJFPUEL2ZGGKU22XH57ROVBR44YF7NATWK5VR6PFP",
+      "protectedBalanceVault": "CBS5V4JO33GD5RAIR7S4V722RSFJZTAKW3G74SZWP6U4GIVV5ADCC27Z",
+      "zkVerifier": "CBBJZABCCL6BCMJNWTOKLDO4FGCUXVRDZDWJ6CURX3KQI6VVIWAMX4AN",
+      "protectionEngine": "CDP2CF23HFMPQ4LS64OBLYNLY7WGD3JWRNL3TEYU2DCGMGZZYHLU7VMV",
+      "usernameRegistry": "CDLETXOPLYOY752OQLABBGOKN4BB2O2FQW4I222O4SH4H6CLRV2XQKTM",
+      "receiptRegistry": "CCRGWBRPQZTYPU3FEIQO4ZVQ5V4B3LAE7AQABI55APIQRL7CIQWPSSFU",
+      "paymentLockEngine": "CCVQV6QRTQULDBNQ3GPY4DBSGSHJ2VRVW5BJ5EDHDJXBQBNFNGH2WNAW",
+      "paymentLockReserveVault": "CBJNXQA535DSWNWOOUX2LEZMSWFOSFRJBHRQSVY3N3JMP64JKRSOIJQG",
+      "floorShieldEngine": "CCQ2S24ZC2BKICY5RQNJWDHEUZGBPVP73YA6HEHUY33JYYTEO3AZHJPL",
+      "floorShieldReserveVault": "CDOI47NDMAPXSNWEAQXMXG6U7ZO2RH72Y5QF5ZHYBS6AMCHZ6T5FT3P5",
+      "floorShieldProtectedVault": "CBKQM3KHXJ456MFRLNTNLUZMDLUO3MAN4F23MUKVR4Q7O5CXJFKV3LMX"
+    },
+    "sourceCommit": null,
     "wasmHashes": null,
-    "activeContractIds": null,
-    "smokeTestedAt": null,
-    "localBuildRecord": "artifacts/pilot-local-build.json"
+    "lastVerifiedAt": null,
+    "reserveFundingStatus": "historical_local_record_says_unfunded_current_state_unknown",
+    "warning": "Historical local records only. IDs are not matched to this public source and may be stale after network resets. Do not use as active configuration without ledger and WASM verification."
   }
 }

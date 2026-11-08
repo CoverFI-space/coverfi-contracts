@@ -1,6 +1,6 @@
 # Focused testnet code release
 
-8 November 2026. Source release only; these changes are not represented as deployed to any network. Mainnet is not deployed by this release.
+8 November 2026. The four-contract suite is deployed and smoke-verified on Testnet at ledger 5627678. See TESTNET_DEPLOYMENT.md for exact IDs, source commit, hashes and controlled simulation evidence. Mainnet is not deployed by this release.
 
 ## Release contents
 
@@ -38,7 +38,7 @@ Expiry settlement accepts only the latest observation at or before expiry and wi
 
 Engine and oracle initialization ABIs and stored config shapes changed. This is a fresh-deployment release, not an in-place upgrade. Historical contract IDs and the app/backend local source do not automatically become compatible. Do not repoint an old funded reserve to the new engine or abandon open positions. Deploy a new four-contract suite and verify client compatibility before activating it.
 
-The runner uses fixed public Testnet RPC and passphrase, defaults to dry-run and requires --execute to sign. It does not seed reserves, publish oracle observations, activate the app or edit contracts.json. It records initialized_not_smoke_verified, not a successful pilot. No signing identity or verified test asset configuration has been selected for a live deployment in this revision.
+The runner uses fixed public Testnet RPC and passphrase, defaults to dry-run and requires --execute to sign. It does not seed reserves, publish oracle observations, activate the app or edit contracts.json. It records initialized_not_smoke_verified, not a successful pilot. Dedicated testnet identities and explicitly mock assets are recorded in TESTNET_DEPLOYMENT.md. The on-chain smoke test is complete; the consumer app integration remains outstanding.
 
 ```sh
 python scripts/deploy_testnet.py --config pilot-config.local.json

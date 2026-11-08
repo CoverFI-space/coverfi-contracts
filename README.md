@@ -2,14 +2,14 @@
 
 One protected USDC test asset, one distinct test payout token, and four pilot contracts: protection_engine, reserve_vault, protected_balance_vault and oracle_adapter. **Testnet only. No mainnet deployment is claimed.**
 
-This source revision has not been deployed or matched to historical contract IDs. It changes initialization ABIs and requires a fresh suite, client compatibility checks, reserve seed and on-chain smoke verification before activation. Do not repoint existing funded reserves or open positions to it.
+The four-contract suite is now deployed and smoke-verified on public Testnet with team-controlled mock assets. See [verified deployment and transaction evidence](TESTNET_DEPLOYMENT.md). It uses fresh IDs and changed initialization ABIs. The existing public app has not been repointed; do not reuse old funded reserves or open positions.
 
 ## Source and verification
 
 - [Code changes, payout units, oracle policy and compatibility](TESTNET_RELEASE.md)
 - [Threat model and remaining limitations](THREAT_MODEL.md)
 - [Evidence and deployment status](PROJECT_STATUS.md)
-- [Historical registry: unverified IDs](contracts.json)
+- [Verified testnet registry and historical archive](contracts.json)
 
 The default Cargo members and pilot deployment tool include only the four contracts above. Username registry, receipt registry and ZK verifier remain as legacy workspace source, outside the funded release. The engine no longer calls a proof verifier. Three other contracts mentioned in older architecture materials exist only in a separate local workspace and are not claimed as public release evidence.
 
@@ -22,7 +22,7 @@ python -m unittest discover -s scripts -p 'test_*.py'
 cargo build --locked --release --target wasm32v1-none -p protection_engine -p reserve_vault -p protected_balance_vault -p oracle_adapter
 ```
 
-The first command tests the pilot; --workspace also tests legacy contracts. Local verification on 8 November 2026 passed 52 workspace unit tests (33 in the pilot) and 8 deployment-boundary tests. GitHub Actions builds the four WASMs and publishes hashes/artifacts. This is not an audit or an on-chain pilot result.
+The first command tests the pilot; --workspace also tests legacy contracts. Local verification on 8 November 2026 passed 52 workspace unit tests (34 in the pilot) and 8 deployment-boundary tests. GitHub Actions builds the four WASMs and publishes hashes/artifacts. This is not an audit or an on-chain pilot result.
 
 ## Deployment
 

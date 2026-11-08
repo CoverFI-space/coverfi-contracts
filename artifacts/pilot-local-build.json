@@ -1,6 +1,6 @@
 {
   "network": "testnet",
-  "status": "built_not_deployed",
+  "status": "built_and_testnet_hash_verified",
   "builtOn": "2026-11-08",
   "target": "wasm32v1-none",
   "profile": "release",
@@ -18,9 +18,10 @@
       "bytes": 12888
     },
     "oracle_adapter": {
-      "sha256": "b101f908eb493994eb29c8495692f45157264717cb252c6e63309585f2057d7a",
-      "bytes": 32275
+      "sha256": "edff139dd9e15e4bf170f7575ba15fb1c8111f83d817dc17efcce65fa743a5d5",
+      "bytes": 32591
     }
   },
-  "note": "Local build hashes; GitHub Actions publishes artifacts for its exact commit. No live deployment is claimed."
+  "note": "Local build hashes verified against deployed public Testnet WASM hashes. See deployment and smoke reports.",
+  "sourceCommit": "6e85036b236df94c550434efdbf7e9287d417921"
 }

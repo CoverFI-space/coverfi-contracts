@@ -1,0 +1,530 @@
+{
+  "network": "testnet",
+  "status": "smoke_verified",
+  "teamControlled": true,
+  "mockAssets": true,
+  "steps": [
+    {
+      "label": "trustline-coverfi-pilot-buyer-20261108-USDC",
+      "ok": true,
+      "value": "",
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "trustline-coverfi-pilot-buyer-20261108-CFUSD",
+      "ok": true,
+      "value": "",
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "trustline-coverfi-pilot-pub3-20261108-CFUSD",
+      "ok": true,
+      "value": "",
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "wasm-hash-oracle_adapter",
+      "ok": true,
+      "value": "edff139dd9e15e4bf170f7575ba15fb1c8111f83d817dc17efcce65fa743a5d5",
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "wasm-hash-reserve_vault",
+      "ok": true,
+      "value": "dbe8b30604c5cc48d34f8cf38e9c35b8ba00b4a6a31368470332f5f66c309b53",
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "wasm-hash-protected_balance_vault",
+      "ok": true,
+      "value": "be7a2e12742306b9aa41fa799cc545380769525cd7513dbc57b8390726abb209",
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "wasm-hash-protection_engine",
+      "ok": true,
+      "value": "ed0fb75b786fabf5780665438fe39d109d7c75536a16c9c549ca54036619d20a",
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "mint-buyer-principal",
+      "ok": true,
+      "value": "",
+      "transactionHashes": [
+        "172df7b2f99e2a68e3052b8930f06758a3256b0a3a718de88ce90cc593eaff2c"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "mint-buyer-premium",
+      "ok": true,
+      "value": "",
+      "transactionHashes": [
+        "0ce717845ae17671dee76bf65c4d4fa137e67476814790142b19414ee5d152bb"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "mint-test-reserve",
+      "ok": true,
+      "value": "",
+      "transactionHashes": [
+        "15cd3b1a4776e88e1a8f5dc51d47e651503a5095bc6dafb8e3afc2701cef619a"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "treasury-with-trustline",
+      "ok": true,
+      "value": "",
+      "transactionHashes": [
+        "357e172e264462ce9c19ad5ecf0b1c30597f96db70506618bc01b4ff26a15fe4"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "seed-test-reserve",
+      "ok": true,
+      "value": "10000000000",
+      "transactionHashes": [
+        "741f82221e5e287e91bf46451f39443e738385e34090afa3165d5533cb3322b7"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "seed-test-automation",
+      "ok": true,
+      "value": "",
+      "transactionHashes": [
+        "6af09a7d6ec37b8b07cda31e995738e8f005524e37ac441222b515a57d71ae30"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "depeg-entry-publisher-1",
+      "ok": true,
+      "value": false,
+      "transactionHashes": [
+        "94c00e113f6598be97cd80ccc0473bc9165ecdb6ae91c17b76cc041ef6d3789e"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "depeg-entry-publisher-2",
+      "ok": true,
+      "value": true,
+      "transactionHashes": [
+        "c35897171532a363b8fe4720386017ebe5330da0102c19720d4c5d32ee935256"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "depeg-quote",
+      "ok": true,
+      "value": {
+        "automation_fee": "500000",
+        "base_premium": "3000000",
+        "concentration_bps": 100,
+        "concentration_surcharge": "0",
+        "entry_price": "100000000",
+        "maximum_payout": "100000000",
+        "notional": "1000000000",
+        "protocol_commission": "600000",
+        "risk_premium": "5000000",
+        "safety_margin": "2000000",
+        "total_due": "5500000",
+        "utilization_bps": 100,
+        "utilization_surcharge": "0",
+        "volatility_bps": 0,
+        "volatility_surcharge": "0"
+      },
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "depeg-open",
+      "ok": true,
+      "value": 1,
+      "transactionHashes": [
+        "205b96e5a34702b256c8fab9989f4c5f14fa186b2b9251b2476a437e4979e9db"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "depeg-position",
+      "ok": true,
+      "value": {
+        "automation_fee": "500000",
+        "claimable_payout": "0",
+        "entry_price": "100000000",
+        "expiry_time": 1794161662,
+        "fee_paid": "5500000",
+        "id": 1,
+        "maximum_payout": "100000000",
+        "notional": "1000000000",
+        "owner": "GBL2Y5BVEJFXDXBLJ5QVOTHO4QGT5CYIALCAOKL5TLQ4E2VQ4CKNUA4Z",
+        "partner": null,
+        "payout_asset": "CAY3UEZ4J3XTD54HFNDOL2LSTBDZ57WK4I5S5HNI53K6YNE2BNXF6KWJ",
+        "payout_claimed": false,
+        "principal_withdrawn": false,
+        "protected_amount": "1000000000",
+        "protected_asset": "CAXJTCW55YLLJC4WUTIEHGFMZZCUP7WGDFUJXAFHSKVBGSJWTNWGOSWC",
+        "risk_premium": "5000000",
+        "settlement_price": "0",
+        "start_time": 1794161542,
+        "status": "Active"
+      },
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "depeg-expiry-observation-publisher-1",
+      "ok": true,
+      "value": false,
+      "transactionHashes": [
+        "b8d603e7ea4917616ba52d64197c3c13501a0e5558191b4515fc558f8327506f"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "depeg-expiry-observation-publisher-2",
+      "ok": true,
+      "value": true,
+      "transactionHashes": [
+        "a914cc99248350244a5e74d431a21fcf2260a17ffbec8de36b4b2695488217bb"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "depeg-settle",
+      "ok": true,
+      "value": {
+        "keeper_rewarded": true,
+        "payout": "60000000",
+        "position_id": 1,
+        "settlement_price": "94000000",
+        "status": "Claimable"
+      },
+      "transactionHashes": [
+        "ac7298356c11e58cd84509d3d83c938ad234fe9864a3ebe17c5526022b73cb7a"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "depeg-claim",
+      "ok": true,
+      "value": "60000000",
+      "transactionHashes": [
+        "5c2c28604fcdeba081ae96b440478f88e3c64e10e8e8b5d6ed92e2614d644a7a"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "depeg-duplicate-claim-rejected",
+      "ok": true,
+      "value": "",
+      "transactionHashes": [],
+      "expectedFailure": true,
+      "error": "\u274c error: transaction simulation failed: HostError: Error(Contract, #14)\n\nEvent log (newest first):\n   0: [Diagnostic Event] contract:CDYOKZH532VB2RHVEFPBEDK3IAZNBXV6JAPHMGHI7GXKCFMECKJIREXB, topics:[error, Error(Contract, #14)], data:\"escalating error to VM trap from failed host function call: fail_with_error\"\n   1: [Diagnostic Event] contract:CDYOKZH532VB2RHVEFPBEDK3IAZNBXV6JAPHMGHI7GXKCFMECKJIREXB, topics:[error, Error(Contract, #14)], data:[\"failing with contract error\", 14]\n   2: [Diagnostic Event] topics:[fn_call, CDYOKZH532VB2RHVEFPBEDK3IAZNBXV6JAPHMGHI7GXKCFMECKJIREXB, claim_payout], data:[GBL2Y5BVEJFXDXBLJ5QVOTHO4QGT5CYIALCAOKL5TLQ4E2VQ4CKNUA4Z, 1]\n\n"
+    },
+    {
+      "label": "depeg-principal-returned",
+      "ok": true,
+      "value": "1000000000",
+      "transactionHashes": [
+        "ba69df42b3c60ef1bab673d67de67928fd48addbc3d16c75c1c0660dc4754ddb"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "no-loss-entry-publisher-1",
+      "ok": true,
+      "value": false,
+      "transactionHashes": [
+        "14836f420b7eca228936ab9ec1f2c6dcc2ec954b3b3377837a8cdb6d60e04506"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "no-loss-entry-publisher-2",
+      "ok": true,
+      "value": true,
+      "transactionHashes": [
+        "5fab3279565e8538d0b27ea7e243435a9ad118b4fe6ee2beb6a2bd1d193d1af8"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "no-loss-quote",
+      "ok": true,
+      "value": {
+        "automation_fee": "500000",
+        "base_premium": "3000000",
+        "concentration_bps": 100,
+        "concentration_surcharge": "0",
+        "entry_price": "100000000",
+        "maximum_payout": "100000000",
+        "notional": "1000000000",
+        "protocol_commission": "600000",
+        "risk_premium": "5000000",
+        "safety_margin": "2000000",
+        "total_due": "5500000",
+        "utilization_bps": 100,
+        "utilization_surcharge": "0",
+        "volatility_bps": 0,
+        "volatility_surcharge": "0"
+      },
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "no-loss-open",
+      "ok": true,
+      "value": 2,
+      "transactionHashes": [
+        "76afa6c8a57112a6d8e2c2e9eba4948148fc60f9f432faae1557b29f92d94af0"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "no-loss-position",
+      "ok": true,
+      "value": {
+        "automation_fee": "500000",
+        "claimable_payout": "0",
+        "entry_price": "100000000",
+        "expiry_time": 1794161957,
+        "fee_paid": "5500000",
+        "id": 2,
+        "maximum_payout": "100000000",
+        "notional": "1000000000",
+        "owner": "GBL2Y5BVEJFXDXBLJ5QVOTHO4QGT5CYIALCAOKL5TLQ4E2VQ4CKNUA4Z",
+        "partner": null,
+        "payout_asset": "CAY3UEZ4J3XTD54HFNDOL2LSTBDZ57WK4I5S5HNI53K6YNE2BNXF6KWJ",
+        "payout_claimed": false,
+        "principal_withdrawn": false,
+        "protected_amount": "1000000000",
+        "protected_asset": "CAXJTCW55YLLJC4WUTIEHGFMZZCUP7WGDFUJXAFHSKVBGSJWTNWGOSWC",
+        "risk_premium": "5000000",
+        "settlement_price": "0",
+        "start_time": 1794161837,
+        "status": "Active"
+      },
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "no-loss-expiry-observation-publisher-1",
+      "ok": true,
+      "value": false,
+      "transactionHashes": [
+        "3bbee00668ccfdd6ccf87fa80ff72dea8d6a8f007bd1b7d7524452bd9cd7691d"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "no-loss-expiry-observation-publisher-2",
+      "ok": true,
+      "value": true,
+      "transactionHashes": [
+        "9c48bc0ca15e52068c0e1f7895fc94e4881f3718f0e3720d193ce731aeb71202"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "no-loss-settle",
+      "ok": true,
+      "value": {
+        "keeper_rewarded": true,
+        "payout": "0",
+        "position_id": 2,
+        "settlement_price": "100000000",
+        "status": "SettledNoPayout"
+      },
+      "transactionHashes": [
+        "d99d1b895e080374b34262e99a78238808f25602204204eff224fc249322e782"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "no-loss-principal-returned",
+      "ok": true,
+      "value": "1000000000",
+      "transactionHashes": [
+        "43661dd92f73e14b43ff361e895be91c769efa1253a39be9e7a0ccaa07e008a2"
+      ],
+      "expectedFailure": false
+    },
+    {
+      "label": "final-reserve-pool",
+      "ok": true,
+      "value": {
+        "automation_balance": "101100000",
+        "cumulative_claims": "60000000",
+        "cumulative_protocol_revenue": "1200000",
+        "cumulative_underwriting": "7800000",
+        "locked_liabilities": "0",
+        "reserved_claims": "0",
+        "safety_balance": "700000",
+        "token": "CAY3UEZ4J3XTD54HFNDOL2LSTBDZ57WK4I5S5HNI53K6YNE2BNXF6KWJ",
+        "total_assets": "10049600000",
+        "total_shares": "10000000000",
+        "unearned_premiums": "0"
+      },
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "final-reserve-token-balance",
+      "ok": true,
+      "value": "10049600000",
+      "transactionHashes": [],
+      "expectedFailure": false
+    },
+    {
+      "label": "final-buyer-principal",
+      "ok": true,
+      "value": "2000000000",
+      "transactionHashes": [],
+      "expectedFailure": false
+    }
+  ],
+  "checks": {
+    "deployedWasmHashesMatch": true,
+    "depegClaimPaid": true,
+    "noLossSettled": true,
+    "principalReturned": true,
+    "duplicateClaimRejected": true,
+    "reserveReconciled": true
+  },
+  "sourceCommit": "6e85036b236df94c550434efdbf7e9287d417921",
+  "contracts": {
+    "oracle_adapter": "CDMP7NOSFTN77TSRN5GVXML7KQVF4P6O77C5SWF6OACHYXOZVXMHM2BA",
+    "reserve_vault": "CD76MVLI3U2WP4W7WAABLXFI65P2EZXPQ7II42PG2WYIGRCL236XAVFM",
+    "protected_balance_vault": "CBLNUMR2PE7B4EGKJ3ZH6SU2BL3EWEVEJOAVCSC4Y6MZHG7N7JMSEK3E",
+    "protection_engine": "CDYOKZH532VB2RHVEFPBEDK3IAZNBXV6JAPHMGHI7GXKCFMECKJIREXB"
+  },
+  "priceTimestamps": {
+    "depeg-entry": 1794161462,
+    "depeg-expiry-observation": 1794161557,
+    "no-loss-entry": 1794161757,
+    "no-loss-expiry-observation": 1794161852
+  },
+  "verifiedAt": "2026-11-08T18:20:37.317983+00:00",
+  "verificationLedger": 5627678,
+  "disclaimer": "Team-controlled mock-asset testnet smoke test. Not Circle USDC, external users, LP commitments or paid volume.",
+  "receiptVerification": [
+    {
+      "hash": "172df7b2f99e2a68e3052b8930f06758a3256b0a3a718de88ce90cc593eaff2c",
+      "status": "SUCCESS",
+      "ledger": 5627526
+    },
+    {
+      "hash": "0ce717845ae17671dee76bf65c4d4fa137e67476814790142b19414ee5d152bb",
+      "status": "SUCCESS",
+      "ledger": 5627531
+    },
+    {
+      "hash": "15cd3b1a4776e88e1a8f5dc51d47e651503a5095bc6dafb8e3afc2701cef619a",
+      "status": "SUCCESS",
+      "ledger": 5627537
+    },
+    {
+      "hash": "357e172e264462ce9c19ad5ecf0b1c30597f96db70506618bc01b4ff26a15fe4",
+      "status": "SUCCESS",
+      "ledger": 5627543
+    },
+    {
+      "hash": "741f82221e5e287e91bf46451f39443e738385e34090afa3165d5533cb3322b7",
+      "status": "SUCCESS",
+      "ledger": 5627547
+    },
+    {
+      "hash": "6af09a7d6ec37b8b07cda31e995738e8f005524e37ac441222b515a57d71ae30",
+      "status": "SUCCESS",
+      "ledger": 5627552
+    },
+    {
+      "hash": "94c00e113f6598be97cd80ccc0473bc9165ecdb6ae91c17b76cc041ef6d3789e",
+      "status": "SUCCESS",
+      "ledger": 5627570
+    },
+    {
+      "hash": "c35897171532a363b8fe4720386017ebe5330da0102c19720d4c5d32ee935256",
+      "status": "SUCCESS",
+      "ledger": 5627573
+    },
+    {
+      "hash": "205b96e5a34702b256c8fab9989f4c5f14fa186b2b9251b2476a437e4979e9db",
+      "status": "SUCCESS",
+      "ledger": 5627580
+    },
+    {
+      "hash": "b8d603e7ea4917616ba52d64197c3c13501a0e5558191b4515fc558f8327506f",
+      "status": "SUCCESS",
+      "ledger": 5627587
+    },
+    {
+      "hash": "a914cc99248350244a5e74d431a21fcf2260a17ffbec8de36b4b2695488217bb",
+      "status": "SUCCESS",
+      "ledger": 5627592
+    },
+    {
+      "hash": "ac7298356c11e58cd84509d3d83c938ad234fe9864a3ebe17c5526022b73cb7a",
+      "status": "SUCCESS",
+      "ledger": 5627610
+    },
+    {
+      "hash": "5c2c28604fcdeba081ae96b440478f88e3c64e10e8e8b5d6ed92e2614d644a7a",
+      "status": "SUCCESS",
+      "ledger": 5627616
+    },
+    {
+      "hash": "ba69df42b3c60ef1bab673d67de67928fd48addbc3d16c75c1c0660dc4754ddb",
+      "status": "SUCCESS",
+      "ledger": 5627622
+    },
+    {
+      "hash": "14836f420b7eca228936ab9ec1f2c6dcc2ec954b3b3377837a8cdb6d60e04506",
+      "status": "SUCCESS",
+      "ledger": 5627628
+    },
+    {
+      "hash": "5fab3279565e8538d0b27ea7e243435a9ad118b4fe6ee2beb6a2bd1d193d1af8",
+      "status": "SUCCESS",
+      "ledger": 5627634
+    },
+    {
+      "hash": "76afa6c8a57112a6d8e2c2e9eba4948148fc60f9f432faae1557b29f92d94af0",
+      "status": "SUCCESS",
+      "ledger": 5627639
+    },
+    {
+      "hash": "3bbee00668ccfdd6ccf87fa80ff72dea8d6a8f007bd1b7d7524452bd9cd7691d",
+      "status": "SUCCESS",
+      "ledger": 5627648
+    },
+    {
+      "hash": "9c48bc0ca15e52068c0e1f7895fc94e4881f3718f0e3720d193ce731aeb71202",
+      "status": "SUCCESS",
+      "ledger": 5627651
+    },
+    {
+      "hash": "d99d1b895e080374b34262e99a78238808f25602204204eff224fc249322e782",
+      "status": "SUCCESS",
+      "ledger": 5627669
+    },
+    {
+      "hash": "43661dd92f73e14b43ff361e895be91c769efa1253a39be9e7a0ccaa07e008a2",
+      "status": "SUCCESS",
+      "ledger": 5627674
+    }
+  ]
+}

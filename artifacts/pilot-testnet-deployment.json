@@ -1,0 +1,207 @@
+{
+  "network": "testnet",
+  "status": "initialized_not_smoke_verified",
+  "sourceCommit": "6e85036b236df94c550434efdbf7e9287d417921",
+  "generatedAt": "2026-11-08T18:06:43.890519+00:00",
+  "contracts": {
+    "oracle_adapter": "CDMP7NOSFTN77TSRN5GVXML7KQVF4P6O77C5SWF6OACHYXOZVXMHM2BA",
+    "reserve_vault": "CD76MVLI3U2WP4W7WAABLXFI65P2EZXPQ7II42PG2WYIGRCL236XAVFM",
+    "protected_balance_vault": "CBLNUMR2PE7B4EGKJ3ZH6SU2BL3EWEVEJOAVCSC4Y6MZHG7N7JMSEK3E",
+    "protection_engine": "CDYOKZH532VB2RHVEFPBEDK3IAZNBXV6JAPHMGHI7GXKCFMECKJIREXB"
+  },
+  "wasmSha256": {
+    "oracle_adapter": "edff139dd9e15e4bf170f7575ba15fb1c8111f83d817dc17efcce65fa743a5d5",
+    "reserve_vault": "dbe8b30604c5cc48d34f8cf38e9c35b8ba00b4a6a31368470332f5f66c309b53",
+    "protected_balance_vault": "be7a2e12742306b9aa41fa799cc545380769525cd7513dbc57b8390726abb209",
+    "protection_engine": "ed0fb75b786fabf5780665438fe39d109d7c75536a16c9c549ca54036619d20a"
+  },
+  "configuration": {
+    "network": "testnet",
+    "source_account": "coverfi-pilot-admin-20261108",
+    "admin": "GCW6NZYQ4G3OLKWH7XBT4FBCWJDXODGD4BVZQM4FPZOXUUOV5GQBWDHA",
+    "treasury": "GCW6NZYQ4G3OLKWH7XBT4FBCWJDXODGD4BVZQM4FPZOXUUOV5GQBWDHA",
+    "publisher1": "GCW6NZYQ4G3OLKWH7XBT4FBCWJDXODGD4BVZQM4FPZOXUUOV5GQBWDHA",
+    "publisher2": "GC4FTGTZFLN33WBRD5OTARJUJIRBGXFQ5LUM2BQZECA5SILGGARIH7WL",
+    "publisher3": "GD6LLQPAY526G5QOHSL6FT3UBMARFWLM4WFNTXRQVMJNFN4S6S7LEGFP",
+    "protected_asset": "CAXJTCW55YLLJC4WUTIEHGFMZZCUP7WGDFUJXAFHSKVBGSJWTNWGOSWC",
+    "payout_asset": "CAY3UEZ4J3XTD54HFNDOL2LSTBDZ57WK4I5S5HNI53K6YNE2BNXF6KWJ",
+    "oracle_source": null,
+    "source_asset": "USDC",
+    "source_decimals": 8
+  },
+  "reserveFunded": true,
+  "smokeTestedAt": "2026-11-08T18:20:37.317983+00:00",
+  "invocations": [
+    {
+      "contract": "CDMP7NOSFTN77TSRN5GVXML7KQVF4P6O77C5SWF6OACHYXOZVXMHM2BA",
+      "method": "initialize",
+      "cliOutput": ""
+    },
+    {
+      "contract": "CDMP7NOSFTN77TSRN5GVXML7KQVF4P6O77C5SWF6OACHYXOZVXMHM2BA",
+      "method": "configure_publishers",
+      "cliOutput": ""
+    },
+    {
+      "contract": "CD76MVLI3U2WP4W7WAABLXFI65P2EZXPQ7II42PG2WYIGRCL236XAVFM",
+      "method": "initialize",
+      "cliOutput": ""
+    },
+    {
+      "contract": "CBLNUMR2PE7B4EGKJ3ZH6SU2BL3EWEVEJOAVCSC4Y6MZHG7N7JMSEK3E",
+      "method": "initialize",
+      "cliOutput": ""
+    },
+    {
+      "contract": "CDYOKZH532VB2RHVEFPBEDK3IAZNBXV6JAPHMGHI7GXKCFMECKJIREXB",
+      "method": "initialize",
+      "cliOutput": ""
+    },
+    {
+      "contract": "CD76MVLI3U2WP4W7WAABLXFI65P2EZXPQ7II42PG2WYIGRCL236XAVFM",
+      "method": "configure_protocol",
+      "cliOutput": ""
+    }
+  ],
+  "transactionReceipts": [
+    {
+      "command": [
+        "contract",
+        "deploy"
+      ],
+      "hashes": [
+        "64d3b014656109526c91eab8f6add472063394335214397c31168609a7c10923",
+        "73d1ab8eaa6166bd7d02e44635c675ad00f6db38963416b81bb1ec47c1579408"
+      ],
+      "result": "CDMP7NOSFTN77TSRN5GVXML7KQVF4P6O77C5SWF6OACHYXOZVXMHM2BA"
+    },
+    {
+      "command": [
+        "contract",
+        "deploy"
+      ],
+      "hashes": [
+        "43b000f301419399b8029ef91a214aa11352362e35c039ae033670eeea733b19",
+        "fccda8524a2a7a6cef565d64bd48a5c999553dc13686e79c987658c3146fcf59"
+      ],
+      "result": "CD76MVLI3U2WP4W7WAABLXFI65P2EZXPQ7II42PG2WYIGRCL236XAVFM"
+    },
+    {
+      "command": [
+        "contract",
+        "deploy"
+      ],
+      "hashes": [
+        "f01a3c398da97b78dcc0e00c6abd087236854039d34048060afd5662ea703d73"
+      ],
+      "result": "CBLNUMR2PE7B4EGKJ3ZH6SU2BL3EWEVEJOAVCSC4Y6MZHG7N7JMSEK3E"
+    },
+    {
+      "command": [
+        "contract",
+        "deploy"
+      ],
+      "hashes": [
+        "a445f5f2752e6834cba138a8334ab9fef682d98e976f806f83da9ee3071b7f46",
+        "c0074e592bff2ecd31ae7bbaf4944f0062fa2fbd0d9d573cfd007c72f5e31e91"
+      ],
+      "result": "CDYOKZH532VB2RHVEFPBEDK3IAZNBXV6JAPHMGHI7GXKCFMECKJIREXB"
+    },
+    {
+      "command": [
+        "contract",
+        "invoke"
+      ],
+      "hashes": [
+        "f6cfaf9aa7ce97b91a974e6b9c3e42c3741d49554a4f3e4b5aaa29e7d6ce7e43"
+      ],
+      "result": ""
+    },
+    {
+      "command": [
+        "contract",
+        "invoke"
+      ],
+      "hashes": [
+        "a7db78e869d60981c2cd5803eaa448ff655e7d3d9a7a95151ed441858ec3da56"
+      ],
+      "result": ""
+    },
+    {
+      "command": [
+        "contract",
+        "invoke"
+      ],
+      "hashes": [
+        "089a9f3a7cbe15b810ed6032ab42830e879d5057908d8a11d15025f7bd54bee3"
+      ],
+      "result": ""
+    },
+    {
+      "command": [
+        "contract",
+        "invoke"
+      ],
+      "hashes": [
+        "6d27219f8cbf325c03d49f4da07d753b917091d6e0f19cd71d31f1a6ba2fb3db"
+      ],
+      "result": ""
+    },
+    {
+      "command": [
+        "contract",
+        "invoke"
+      ],
+      "hashes": [
+        "476ab0c0dc420af67938da05e3cf0b2c8af4b67ddd16ec43305e2b2c566d6b6a"
+      ],
+      "result": ""
+    },
+    {
+      "command": [
+        "contract",
+        "invoke"
+      ],
+      "hashes": [
+        "8e29062297e6cd63fa9c82dc5abca65f09aa9d7a383dcfe9162ad6b201a37e28"
+      ],
+      "result": ""
+    }
+  ],
+  "warning": "No oracle observations or liquidity are seeded by this runner. Publish funded balances and lifecycle transactions before activating IDs. All assets are testnet only. No mainnet deployment is performed.",
+  "postDeploymentUpdates": [
+    {
+      "label": "treasury-with-trustline",
+      "ok": true,
+      "value": "",
+      "transactionHashes": [
+        "357e172e264462ce9c19ad5ecf0b1c30597f96db70506618bc01b4ff26a15fe4"
+      ],
+      "expectedFailure": false
+    }
+  ],
+  "effectiveConfiguration": {
+    "network": "testnet",
+    "source_account": "coverfi-pilot-admin-20261108",
+    "admin": "GCW6NZYQ4G3OLKWH7XBT4FBCWJDXODGD4BVZQM4FPZOXUUOV5GQBWDHA",
+    "treasury": "GD6LLQPAY526G5QOHSL6FT3UBMARFWLM4WFNTXRQVMJNFN4S6S7LEGFP",
+    "publisher1": "GCW6NZYQ4G3OLKWH7XBT4FBCWJDXODGD4BVZQM4FPZOXUUOV5GQBWDHA",
+    "publisher2": "GC4FTGTZFLN33WBRD5OTARJUJIRBGXFQ5LUM2BQZECA5SILGGARIH7WL",
+    "publisher3": "GD6LLQPAY526G5QOHSL6FT3UBMARFWLM4WFNTXRQVMJNFN4S6S7LEGFP",
+    "protected_asset": "CAXJTCW55YLLJC4WUTIEHGFMZZCUP7WGDFUJXAFHSKVBGSJWTNWGOSWC",
+    "payout_asset": "CAY3UEZ4J3XTD54HFNDOL2LSTBDZ57WK4I5S5HNI53K6YNE2BNXF6KWJ",
+    "oracle_source": null,
+    "source_asset": "USDC",
+    "source_decimals": 8
+  },
+  "smokeEvidence": "artifacts/pilot-testnet-smoke.json",
+  "currentStatus": "testnet_smoke_verified_mock_assets",
+  "tools": {
+    "rustc": "1.97.1 (8bab26f4f 2026-07-14)",
+    "cargo": "1.97.1 (c980f4866 2026-06-30)",
+    "stellarCli": "30.0.1 (f2a7b74175c34585f3b30a1abf42a2d41cbcc390)",
+    "platform": "x86_64-pc-windows-msvc",
+    "wasmTarget": "wasm32v1-none",
+    "wasmOptimization": "disabled in CLI; Cargo release profile applied"
+  }
+}

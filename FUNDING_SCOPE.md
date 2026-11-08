@@ -4,9 +4,9 @@ Proposed 12-week, USD 40,000 testnet project. Not an announced mainnet release.
 
 ## One primitive and one market
 
-Build and validate a single USDC testnet price-protection market using protection_engine and reserve_vault. Include protected_balance_vault and a price-feed component only as required dependencies. The source enforces distinct seven-decimal protected and payout tokens. Prices, premiums and claims use payout-token units as specified in TESTNET_RELEASE.md; no guaranteed USD reimbursement is claimed. Final testnet token IDs and issuers remain to be verified before activation.
+Build and validate a single USDC testnet price-protection market using protection_engine and reserve_vault. Include protected_balance_vault and a price-feed component only as required dependencies. The source enforces distinct seven-decimal protected and payout tokens. Prices, premiums and claims use payout-token units as specified in TESTNET_RELEASE.md; no guaranteed USD reimbursement is claimed. Fresh mock token IDs, issuer, contract hashes and controlled smoke evidence are now verified in TESTNET_DEPLOYMENT.md; public app activation remains outstanding.
 
-The public workspace currently has seven crates. Its default release now contains only protection_engine, reserve_vault, protected_balance_vault and oracle_adapter. Proof gating has been removed from the engine. Legacy username, receipt and verifier crates remain outside the pilot release. The source is tested locally; it is not yet an activated on-chain pilot.
+The public workspace currently has seven crates. Its default release now contains only protection_engine, reserve_vault, protected_balance_vault and oracle_adapter. Proof gating has been removed from the engine. Legacy username, receipt and verifier crates remain outside the pilot release. The source is tested locally and deployed with controlled on-chain smoke evidence. It is not yet a third-party user pilot or integrated public app.
 
 Excluded from the ask: username_registry, receipt_registry, payment_lock_engine, floor_shield_engine, zk_verifier, partner invoice API and AI assistant. Local-only or historical implementations are not claimed as public grant deliverables. A partner integration uses only the core protection lifecycle.
 

@@ -1,14 +1,14 @@
 # CoverFi evidence and release status
 
-Reviewed 8 November 2026. This is a source/documentation review, not an audit or a live ledger attestation.
+Reviewed 8 November 2026. This records source review and a timestamped, controlled testnet verification. It is not an independent security audit or third-party product validation.
 
 | Item | Evidence and limitation |
 | --- | --- |
 | Public source | Seven crates in the workspace; only four pilot contracts are default members and selected by the pilot runner. |
 | Local-only source | A separate local workspace contains quorum_oracle_source, payment_lock_engine and floor_shield_engine. Their implementation is not evidence in this public release. |
 | Mainnet | No verified deployment supplied. Mainnet is recorded as not deployed; unsigned deployment artifacts are not a deployment. |
-| Testnet | Historical IDs are in contracts.json. They have not been revalidated for this revision or matched to this public source revision. |
-| Reserve | The historical local registry says USDC reserves were unfunded. Current balances have not been checked. No externally verified LP commitment is published. |
+| Testnet | A fresh four-contract deployment is hash-matched and smoke-verified at ledger 5627678; see TESTNET_DEPLOYMENT.md. Older IDs are archived separately as unverified. |
+| Reserve | The fresh pilot was seeded with 1,000 CFUSD test reserve and 10 CFUSD automation funds; post-smoke balance was reconciled on-chain. These are worthless mock tokens, not external capital. No externally verified LP commitment is published. |
 | Users and partners | The team reports Tael and Fianza/Finza founders communicated with it and tried the product. Public confirmation, activity records and integration evidence have not been supplied. Confirm the second partner's name before submitting. |
 | Funding support | The team reports more than USD 1,000 from Stellar Build Delhi. Award/payment evidence and exact amount have not been supplied. This is not classified as LP capital or revenue. |
 | Team | Pallavi Jain, Garvit Arora and Piyush. No insurance, actuarial or protocol underwriting specialist is claimed. |
@@ -19,7 +19,7 @@ Reviewed 8 November 2026. This is a source/documentation review, not an audit or
 
 The current public protection_engine uses the market-bound oracle_adapter and has no zk_verifier dependency. Its initialization ABI differs from the prior public release. The separate local engine uses admin-submitted price observations. Historical deployed IDs cannot be assumed to implement either revision without WASM hash and configuration checks.
 
-The new funding scope is one USDC testnet market. It does not mean that market has been deployed or validated. The default four-contract source release now removes the proof dependency, enforces distinct seven-decimal tokens and specifies payout-token denomination. A fresh on-chain deployment and client compatibility verification remain outstanding. Do not describe the seven-crate legacy workspace as a finished minimal depeg engine.
+The new funding scope is one USDC testnet market. The controlled mock-asset deployment and smoke lifecycle are now verified; this is not external product validation. The default four-contract source release now removes the proof dependency, enforces distinct seven-decimal tokens and specifies payout-token denomination. A fresh on-chain deployment is complete; the public app/backend client integration remains outstanding. Do not describe the seven-crate legacy workspace as a finished minimal depeg engine.
 
 ## Reviewer evidence checklist
 
@@ -34,4 +34,4 @@ Canonical registry: https://github.com/CoverFI-space/coverfi-contracts/blob/main
 
 ## Code verification update
 
-The current code passed 52 workspace unit tests (34 pilot tests) and 8 Python deployment-boundary tests locally on 8 November 2026. The earlier Cargo-cache permission failure was resolved. See TESTNET_RELEASE.md and the release commit CI for build evidence. No live deployment or balances are attested by these tests.
+The current code passed 52 workspace unit tests (34 pilot tests) and 8 Python deployment-boundary tests locally on 8 November 2026. The earlier Cargo-cache permission failure was resolved. See TESTNET_RELEASE.md and the release commit CI for build evidence. Native tests alone do not attest live state. Separate on-chain evidence now records source-matched contract hashes, funding, two lifecycles and reconciled balances in TESTNET_DEPLOYMENT.md.
