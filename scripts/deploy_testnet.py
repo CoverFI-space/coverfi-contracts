@@ -9,12 +9,15 @@ import json
 from pathlib import Path
 import re
 import subprocess
+import sys
 from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGES = ("oracle_adapter", "reserve_vault", "protected_balance_vault", "protection_engine")
 NETWORK = ["--rpc-url", "https://soroban-testnet.stellar.org",
            "--network-passphrase", "Test SDF Network ; September 2015"]
+TRANSACTION_RECEIPTS = []
+CLI_CONFIG = ROOT / ".stellar"
 
 
 def validate(config):
@@ -23,9 +26,11 @@ def validate(config):
     for field in ("admin", "treasury", "publisher1", "publisher2", "publisher3"):
         if not re.fullmatch(r"G[A-Z2-7]{55}", config.get(field, "")):
             raise ValueError(f"{field} must be a public Stellar account address")
-    for field in ("protected_asset", "payout_asset", "oracle_source"):
+    for field in ("protected_asset", "payout_asset"):
         if not re.fullmatch(r"C[A-Z2-7]{55}", config.get(field, "")):
             raise ValueError(f"{field} must be a contract address")
+    if config.get("oracle_source") is not None and not re.fullmatch(r"C[A-Z2-7]{55}", config["oracle_source"]):
+        raise ValueError("oracle_source must be null or a contract address")
     if config["protected_asset"] == config["payout_asset"]:
         raise ValueError("Protected and payout assets must differ")
     if len({config[f"publisher{i}"] for i in (1, 2, 3)}) != 3:
@@ -42,15 +47,30 @@ def validate(config):
 
 
 def run(args):
-    return subprocess.run(args, cwd=ROOT, check=True, text=True,
-                          stdout=subprocess.PIPE).stdout.strip()
+    if Path(args[0]).stem == "stellar":
+        args = [args[0], "--config-dir", str(CLI_CONFIG), *args[1:]]
+    result = subprocess.run(args, cwd=ROOT, text=True,
+                            encoding="utf-8", errors="replace",
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    sys.stderr.write(result.stderr)
+    result.check_returncode()
+    if Path(args[0]).stem == "stellar":
+        hashes = sorted(set(re.findall(r"/tx/([a-f0-9]{64})", result.stderr)))
+        if hashes:
+            TRANSACTION_RECEIPTS.append({"command": args[1:3], "hashes": hashes,
+                                         "result": result.stdout.strip()})
+    return result.stdout.strip()
 
 
 def main():
+    global CLI_CONFIG
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--target-dir", type=Path, default=ROOT / "target")
+    parser.add_argument("--stellar-config-dir", type=Path, default=ROOT / ".stellar")
     options = parser.parse_args()
+    CLI_CONFIG = options.stellar_config_dir.resolve()
     config = json.loads(options.config.read_text(encoding="utf-8-sig"))
     validate(config)
     transcript = []
@@ -60,7 +80,8 @@ def main():
                "--source-account", config["source_account"], *NETWORK,
                "--send=yes", "--", method]
         for name, value in kwargs.items():
-            cmd += [f"--{name}", str(value).lower() if isinstance(value, bool) else str(value)]
+            encoded = "null" if value is None else str(value).lower() if isinstance(value, bool) else str(value)
+            cmd += [f"--{name}", encoded]
         if options.execute:
             transcript.append({"contract": contract, "method": method, "cliOutput": run(cmd)})
             journal("initialization_in_progress")
@@ -68,7 +89,7 @@ def main():
             print(json.dumps(cmd))
 
     build = ["cargo", "build", "--locked", "--release", "--target", "wasm32v1-none",
-             "--target-dir", str(ROOT / "target")]
+             "--target-dir", str(options.target_dir.resolve())]
     for package in PACKAGES:
         build += ["-p", package]
     ids = {package: f"<pending:{package}>" for package in PACKAGES}
@@ -83,6 +104,7 @@ def main():
             "network": "testnet", "status": status, "sourceCommit": commit,
             "contracts": ids, "wasmSha256": hashes, "configuration": config,
             "invocations": transcript, "smokeTestedAt": None,
+            "transactionReceipts": TRANSACTION_RECEIPTS,
         }, indent=2) + "\n", encoding="utf-8")
 
     if options.execute:
@@ -91,7 +113,7 @@ def main():
         commit = run(["git", "rev-parse", "HEAD"])
         run(build)
         for package in PACKAGES:
-            wasm = ROOT / "target/wasm32v1-none/release" / f"{package}.wasm"
+            wasm = options.target_dir / "wasm32v1-none/release" / f"{package}.wasm"
             hashes[package] = hashlib.sha256(wasm.read_bytes()).hexdigest()
             result = run(["stellar", "contract", "deploy", "--wasm", str(wasm),
                           "--source-account", config["source_account"], *NETWORK])
@@ -126,6 +148,7 @@ def main():
             "sourceCommit": commit, "generatedAt": datetime.now(timezone.utc).isoformat(),
             "contracts": ids, "wasmSha256": hashes, "configuration": config,
             "reserveFunded": False, "smokeTestedAt": None, "invocations": transcript,
+            "transactionReceipts": TRANSACTION_RECEIPTS,
             "warning": "No oracle observations or liquidity are seeded by this runner. "
                        "Publish funded balances and lifecycle transactions before activating IDs. "
                        "All assets are testnet only. No mainnet deployment is performed.",

@@ -20,7 +20,7 @@ Revision prepared 8 November 2026. Documentation changes are not proof that pros
 - Reviewed all seven public CoverFI-space repository inventories via reference clones; inspected contracts and documentation in detail and compared them with the separate local workspace.
 - Checked the public Cargo workspace inventory and source fee constants. Did not perform an independent security audit or review every source line.
 - Checked revised document navigation, JSON, local links and Git diffs before publishing.
-- Attempted `cargo test --workspace --locked` locally. The first attempt stopped at a Cargo cache permission error. That access issue was resolved in the code revision; 51 workspace unit tests and 7 deployment-boundary tests now pass locally.
+- Attempted `cargo test --workspace --locked` locally. The first attempt stopped at a Cargo cache permission error. That access issue was resolved in the code revision; 52 workspace unit tests and 8 deployment-boundary tests now pass locally.
 - No live ledger balance, deployment, mainnet activity, partner integration, award payment or external user transaction is attested by this revision.
 
 ## Before submitting

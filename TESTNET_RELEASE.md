@@ -26,7 +26,7 @@ Example: 100 USDC test units entered at 1.00 and settled at 0.94 pay 6 test payo
 
 ## Oracle policy
 
-The public release retains oracle_adapter; it does not copy the local single-admin engine price feed. The pilot config enables two of three distinct authorized publishers to submit exactly matching price/timestamp observations. Distinct addresses do not establish independent operators. The configured upstream source is also trusted when refresh/refresh_at is used; do not describe the full adapter as quorum-only.
+The public release retains oracle_adapter; it does not copy the local single-admin engine price feed. The pilot config enables two of three distinct authorized publishers to submit exactly matching price/timestamp observations. Distinct addresses do not establish independent operators. The upstream source is optional: null disables both refresh paths. A configured source is also trusted when refresh/refresh_at is used; do not describe the full adapter as quorum-only.
 
 The adapter rejects unknown assets, nonpositive prices, future timestamps, submissions older than the configured freshness limit and movement beyond the configured deviation limit. The testnet runner sets freshness to 3,600 seconds and deviation to 10,000 bps. This permits deep downward moves, but a recovery exceeding 100% relative to the previous observation is rejected; monitoring and explicit operator handling are still needed. These thresholds are operational test settings, not an underwriting model.
 
@@ -50,6 +50,6 @@ Use scripts/pilot-config.example.json as a field template. Replace every placeho
 
 ## Verification
 
-Local verification on 8 November 2026: 51 workspace unit tests passed, including 33 tests across the four pilot contracts; 7 Python deployment-boundary tests passed. Test coverage includes depeg payout/cap, no-loss exit, stale entry, missing expiry, history rollover, duplicate claims, withdrawal safety, spoofed engine/reward calls, token decimals, oracle pair mismatch, publisher rotation and future observations. A lifecycle test mocks only buyer authorization and confirms the actual engine authorizes its vault calls.
+Local verification on 8 November 2026: 52 workspace unit tests passed, including 34 tests across the four pilot contracts; 8 Python deployment-boundary tests passed. Test coverage includes depeg payout/cap, no-loss exit, stale entry, missing expiry, history rollover, duplicate claims, withdrawal safety, spoofed engine/reward calls, token decimals, oracle pair mismatch, publisher rotation and future observations. A lifecycle test mocks only buyer authorization and confirms the actual engine authorizes its vault calls.
 
 See GitHub Actions for the release commit's native tests and four-contract WASM build artifacts/hashes. Native tests and WASM builds are not live testnet smoke tests or an independent audit. Generated deployment reports remain unverified until balances and transaction receipts establish the deployed lifecycle.

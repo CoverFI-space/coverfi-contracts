@@ -34,4 +34,4 @@ Canonical registry: https://github.com/CoverFI-space/coverfi-contracts/blob/main
 
 ## Code verification update
 
-The current code passed 51 workspace unit tests (33 pilot tests) and 7 Python deployment-boundary tests locally on 8 November 2026. The earlier Cargo-cache permission failure was resolved. See TESTNET_RELEASE.md and the release commit CI for build evidence. No live deployment or balances are attested by these tests.
+The current code passed 52 workspace unit tests (34 pilot tests) and 8 Python deployment-boundary tests locally on 8 November 2026. The earlier Cargo-cache permission failure was resolved. See TESTNET_RELEASE.md and the release commit CI for build evidence. No live deployment or balances are attested by these tests.

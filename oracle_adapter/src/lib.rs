@@ -52,7 +52,7 @@ pub struct PriceObservation {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OracleConfig {
     pub admin: Address,
-    pub source: Address,
+    pub source: Option<Address>,
     pub protected_asset: Address,
     pub payout_asset: Address,
     pub source_asset: Symbol,
@@ -217,9 +217,10 @@ fn save_observation(env: &Env, asset: &Address, observation: PriceObservation) -
 
 fn source_price(env: &Env, at: Option<u64>) -> Option<PriceObservation> {
     let cfg = config(env);
+    let source_address = cfg.source?;
     let source_asset = ReflectorAsset::Other(cfg.source_asset);
     let caller = env.current_contract_address();
-    let source = ReflectorClient::new(env, &cfg.source);
+    let source = ReflectorClient::new(env, &source_address);
     let raw = if let Some(timestamp) = at {
         source.price(&caller, &source_asset, &timestamp)
     } else {
@@ -236,7 +237,7 @@ impl OracleAdapter {
     pub fn initialize(
         env: Env,
         admin: Address,
-        source: Address,
+        source: Option<Address>,
         source_asset: Symbol,
         source_decimals: u32,
         max_age_seconds: u64,

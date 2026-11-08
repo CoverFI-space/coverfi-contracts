@@ -140,7 +140,7 @@ fn setup(reserve_amount: i128) -> Fixture {
     reserve_vault.configure_protocol(&admin, &engine_id, &oracle_id);
     oracle.initialize(
         &admin,
-        &source,
+        &Some(source.clone()),
         &Symbol::new(&env, "USDC"),
         &8,
         &3_600,

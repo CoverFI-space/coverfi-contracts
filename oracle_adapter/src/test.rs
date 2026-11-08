@@ -25,7 +25,7 @@ fn setup() -> Fixture {
     let client = OracleAdapterClient::new(&env, &contract);
     client.initialize(
         &admin,
-        &source,
+        &Some(source.clone()),
         &Symbol::new(&env, "USDC"),
         &8,
         &600,
@@ -117,6 +117,32 @@ fn single_publisher_cannot_create_a_price() {
         &1_000
     ));
     assert_eq!(fixture.client.get_fresh_price(&fixture.asset), None);
+}
+
+#[test]
+fn publisher_only_mode_has_no_external_refresh_path() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let admin = Address::generate(&env);
+    let asset = Address::generate(&env);
+    let payout = Address::generate(&env);
+    let id = env.register(OracleAdapter, ());
+    let client = OracleAdapterClient::new(&env, &id);
+    client.initialize(
+        &admin,
+        &None,
+        &Symbol::new(&env, "USDC"),
+        &8,
+        &600,
+        &10_000,
+        &asset,
+        &payout,
+    );
+    assert_eq!(client.get_config().source, None);
+    assert_eq!(
+        client.try_refresh(&admin, &asset),
+        Err(Ok(OracleError::MissingPrice.into()))
+    );
 }
 
 #[test]

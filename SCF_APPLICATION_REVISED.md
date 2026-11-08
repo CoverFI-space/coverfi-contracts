@@ -36,7 +36,7 @@ The organization publishes seven repositories at https://github.com/CoverFI-spac
 
 The team reports receiving more than USD 1,000 from Stellar Build Delhi, formal founder communications with Tael and Fianza/Finza, and product trials by those contacts. Award/payment evidence, exact amount, partner name confirmation and public testing evidence remain to be attached. We do not claim signed LP commitments, a live partner integration, verified third-party protection activity, paid volume or mainnet deployment.
 
-Historical testnet IDs and their limitations are published at https://github.com/CoverFI-space/coverfi-contracts/blob/main/contracts.json. Historical smoke tests and old test counts do not establish current deployment health or correspondence to current source. The source now passes 51 workspace unit tests and 7 deployment-boundary tests locally; CI records the four-contract build. Before activation, publish source commit, WASM hashes, initialized settings, reserve state and end-to-end transaction evidence.
+Historical testnet IDs and their limitations are published at https://github.com/CoverFI-space/coverfi-contracts/blob/main/contracts.json. Historical smoke tests and old test counts do not establish current deployment health or correspondence to current source. The source now passes 52 workspace unit tests and 8 deployment-boundary tests locally; CI records the four-contract build. Before activation, publish source commit, WASM hashes, initialized settings, reserve state and end-to-end transaction evidence.
 
 ## Tranche 1 - focused specification and reproducible release
 

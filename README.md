@@ -22,7 +22,7 @@ python -m unittest discover -s scripts -p 'test_*.py'
 cargo build --locked --release --target wasm32v1-none -p protection_engine -p reserve_vault -p protected_balance_vault -p oracle_adapter
 ```
 
-The first command tests the pilot; --workspace also tests legacy contracts. Local verification on 8 November 2026 passed 51 workspace unit tests (33 in the pilot) and 7 deployment-boundary tests. GitHub Actions builds the four WASMs and publishes hashes/artifacts. This is not an audit or an on-chain pilot result.
+The first command tests the pilot; --workspace also tests legacy contracts. Local verification on 8 November 2026 passed 52 workspace unit tests (33 in the pilot) and 8 deployment-boundary tests. GitHub Actions builds the four WASMs and publishes hashes/artifacts. This is not an audit or an on-chain pilot result.
 
 ## Deployment
 

@@ -8,7 +8,7 @@
   "publisher3": "<TESTNET_PUBLISHER_3_PUBLIC_KEY>",
   "protected_asset": "<VERIFIED_USDC_TEST_ASSET_CONTRACT>",
   "payout_asset": "<DISTINCT_SEVEN_DECIMAL_TEST_PAYOUT_CONTRACT>",
-  "oracle_source": "<TESTNET_SOURCE_CONTRACT>",
+  "oracle_source": null,
   "source_asset": "USDC",
   "source_decimals": 8
 }

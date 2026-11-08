@@ -18,6 +18,9 @@ class TestnetBoundary(unittest.TestCase):
     def test_public_testnet_configuration(self):
         validate(self.config())
 
+    def test_publisher_only_mode_has_no_dummy_source(self):
+        validate(dict(self.config(), oracle_source=None))
+
     def test_non_testnet_rejected(self):
         for network in ("mainnet", "pubnet", "futurenet", "custom"):
             with self.subTest(network=network), self.assertRaises(ValueError):
