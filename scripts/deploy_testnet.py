@@ -47,6 +47,7 @@ def validate(config):
 
 
 def run(args):
+    operation = args[1:3]
     if Path(args[0]).stem == "stellar":
         args = [args[0], "--config-dir", str(CLI_CONFIG), *args[1:]]
     result = subprocess.run(args, cwd=ROOT, text=True,
@@ -57,7 +58,7 @@ def run(args):
     if Path(args[0]).stem == "stellar":
         hashes = sorted(set(re.findall(r"/tx/([a-f0-9]{64})", result.stderr)))
         if hashes:
-            TRANSACTION_RECEIPTS.append({"command": args[1:3], "hashes": hashes,
+            TRANSACTION_RECEIPTS.append({"command": operation, "hashes": hashes,
                                          "result": result.stdout.strip()})
     return result.stdout.strip()
 
@@ -115,7 +116,7 @@ def main():
         for package in PACKAGES:
             wasm = options.target_dir / "wasm32v1-none/release" / f"{package}.wasm"
             hashes[package] = hashlib.sha256(wasm.read_bytes()).hexdigest()
-            result = run(["stellar", "contract", "deploy", "--wasm", str(wasm),
+            result = run(["stellar", "contract", "deploy", "--wasm", str(wasm), "--optimize=false",
                           "--source-account", config["source_account"], *NETWORK])
             matches = re.findall(r"\bC[A-Z2-7]{55}\b", result)
             if len(set(matches)) != 1:
