@@ -1,0 +1,92 @@
+{
+  "reviewDate": "2026-11-09",
+  "reviewType": "AI-assisted internal review; not independent audit",
+  "rustSourceCommit": "6e85036b236df94c550434efdbf7e9287d417921",
+  "rustClippy": {
+    "scope": "four pilot contracts, all targets",
+    "counts": {
+      "warning": 52
+    },
+    "diagnosticKinds": [
+      [
+        "warning",
+        "deprecated",
+        "use of deprecated method `soroban_sdk::events::Events::publish`: use the #[contractevent] macro on a contract event type",
+        "reserve_vault\\src\\lib.rs"
+      ],
+      [
+        "warning",
+        "clippy::too_many_arguments",
+        "this function has too many arguments (8/7)",
+        "oracle_adapter\\src\\lib.rs"
+      ],
+      [
+        "warning",
+        "deprecated",
+        "use of deprecated method `soroban_sdk::events::Events::publish`: use the #[contractevent] macro on a contract event type",
+        "oracle_adapter\\src\\lib.rs"
+      ],
+      [
+        "warning",
+        "clippy::needless_borrows_for_generic_args",
+        "the borrowed expression implements the required traits",
+        "reserve_vault\\src\\lib.rs"
+      ],
+      [
+        "warning",
+        "clippy::needless_borrows_for_generic_args",
+        "the borrowed expression implements the required traits",
+        "protected_balance_vault\\src\\lib.rs"
+      ],
+      [
+        "warning",
+        "deprecated",
+        "use of deprecated method `soroban_sdk::events::Events::publish`: use the #[contractevent] macro on a contract event type",
+        "protection_engine\\src\\lib.rs"
+      ],
+      [
+        "warning",
+        "clippy::too_many_arguments",
+        "this function has too many arguments (8/7)",
+        "protection_engine\\src\\lib.rs"
+      ],
+      [
+        "warning",
+        "clippy::too_many_arguments",
+        "this function has too many arguments (8/7)",
+        "reserve_vault\\src\\lib.rs"
+      ],
+      [
+        "warning",
+        "clippy::too_many_arguments",
+        "this function has too many arguments (9/7)",
+        "oracle_adapter\\src\\lib.rs"
+      ]
+    ]
+  },
+  "backendBaselineCommit": "73f40010c06290d5bc8892cffe7573c5ed5af640",
+  "backendBaselineTests": {
+    "passed": 26,
+    "failed": 0
+  },
+  "backendProductionAuditBefore": {
+    "critical": 1,
+    "high": 5,
+    "moderate": 1,
+    "totalAffectedPackages": 7
+  },
+  "remediation": {
+    "draftPr": "https://github.com/CoverFI-space/CoverFi-backend/pull/1",
+    "commit": "8185fd7",
+    "merged": false,
+    "deployed": false,
+    "backendTestsPassed": 26,
+    "productionAuditKnownAdvisories": 0,
+    "scopeLimitation": "SDK major migration; additional RPC/oracle/XDR integration checks required"
+  },
+  "modelTests": {
+    "passed": 4,
+    "actuarialValidation": false
+  },
+  "externalAuditPerformed": false
+}

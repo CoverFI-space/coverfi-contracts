@@ -36,10 +36,17 @@ This is a dry-run. Explicit --execute signs testnet deployment/initialization tr
 
 ## Funding revision
 
-- [Focused USD 40,000 / 12-week scope](FUNDING_SCOPE.md)
+- [Focused USD 50,000 / 12-week scope](FUNDING_SCOPE.md)
 - [Updated application answers](SCF_APPLICATION_REVISED.md)
 - [Business and sustainability plan](BUSINESS_PLAN.md)
 - [AI assistance disclosure](AI_DISCLOSURE.md)
 - [Response to voter feedback](REVIEW_RESPONSE.md)
 
 LP commitments, third-party users and a partner integration remain evidence targets. Current team underwriting experience and independent review gaps remain disclosed. Prototype prices are not actuarially validated; no guaranteed returns or USD reimbursement are claimed.
+
+
+## 9 November resubmission update
+
+[USD 50,000 budget](BUDGET_50000.md), [reported CA role](TEAM_RISK_PROFILE.md), [checked SCF requirements](SCF_REQUIREMENTS_CHECK.md), [pilot kit](PILOT_PLAN.md), [conditional reserve interest](RESERVE_INTEREST_TEMPLATE.md), [monitoring form answer](MONITORING_APPLICATION_ANSWER.md), and [AI disclosure](AI_DISCLOSURE.md). Future mainnet may be planned; current deployment remains testnet only.
+
+[Internal security review and Audit Bank preparation](SECURITY_REVIEW_READINESS.md) includes a separately reviewed backend dependency remediation PR. This is not an independent audit.

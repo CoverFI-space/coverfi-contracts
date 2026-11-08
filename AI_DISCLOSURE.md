@@ -1,19 +1,11 @@
-# AI assistance disclosure
+# AI generation and human review disclosure
 
-Updated 8 November 2026.
+Updated 9 November 2026.
 
-## Codebase
+The founder states that all CoverFi code was generated using AI tools, including Cursor, Claude and GPT. The team reports manually reviewing each part of the contracts and backend and running multiple tests. AI generation is not being described as merely occasional autocomplete. A historical file-by-file attribution/review log was not supplied, so this statement records the team's account rather than independently proving every review. It does not establish human approval of later changes: the new reserve worksheet and SDK migration PR still need team review.
 
-The team reports using Cursor, Claude and GPT while developing CoverFi. It reports reviewing the code line by line. This describes the team's review process; it is not an independent audit or a guarantee that defects are absent. A historical file-by-file attribution log was not supplied, so precise AI-authored code percentages are unknown.
+Codex also generated or assisted recent contract changes, tests, deployment tooling, the reserve scenario model, security-readiness materials and revised submission documents. The codebase authorship disclosure does not imply that all historical application text was AI-generated: exact AI-drafted sections of the old application have not yet been identified. The revised application, scope, budget, milestone and business documents are AI-assisted drafts requiring final team review.
 
-Codex also assisted the 8 November 2026 contract changes, regression tests, deployment tooling and release documentation. Passing tests do not establish independent review; founder review of this code revision remains required.
+Verified engineering evidence is separately recorded: 52 contract unit tests, eight deployment-boundary tests and four new deterministic-model tests; 26 public-backend tests; source-matched testnet hashes and controlled smoke receipts. Test success does not establish independent security review, actuarial validation, product demand or absence of vulnerabilities.
 
-## Submission materials
-
-Codex assisted the 8 November 2026 revision of the scope, milestone plan, budget, business plan, evidence/status register, documentation and application answers. These are AI-assisted drafts. The team must review the revised claims, numbers and technical descriptions before submitting them. Human approval of this new revision has not yet been recorded.
-
-The team has not identified the exact AI-drafted sections or tools used for the original SCF application. That historical attribution remains unconfirmed and must not be presented as a completed disclosure.
-
-## Accountability
-
-The three-person team owns the final code and submission. AI output does not establish deployments, partner endorsements, liquidity commitments, user counts, test success or actuarial validation. Report only claims supported by the evidence register. Record human reviewers, review date, release commit and CI links before the next vote.
+The four-person team remains responsible for source code and every submitted claim. The fourth member's identity/profile and sign-off are pending. Record named human reviewers, reviewed commit, date and any changes before submitting. No independent auditor, CA sign-off on the new examples, or external users are claimed by this disclosure.

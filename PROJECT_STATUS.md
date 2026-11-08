@@ -1,6 +1,6 @@
 # CoverFi evidence and release status
 
-Reviewed 8 November 2026. This records source review and a timestamped, controlled testnet verification. It is not an independent security audit or third-party product validation.
+Reviewed 9 November 2026. This records source review and a timestamped, controlled testnet verification. It is not an independent security audit or third-party product validation.
 
 | Item | Evidence and limitation |
 | --- | --- |
@@ -9,9 +9,9 @@ Reviewed 8 November 2026. This records source review and a timestamped, controll
 | Mainnet | No verified deployment supplied. Mainnet is recorded as not deployed; unsigned deployment artifacts are not a deployment. |
 | Testnet | A fresh four-contract deployment is hash-matched and smoke-verified at ledger 5627678; see TESTNET_DEPLOYMENT.md. Older IDs are archived separately as unverified. |
 | Reserve | The fresh pilot was seeded with 1,000 CFUSD test reserve and 10 CFUSD automation funds; post-smoke balance was reconciled on-chain. These are worthless mock tokens, not external capital. No externally verified LP commitment is published. |
-| Users and partners | The team reports Tael and Fianza/Finza founders communicated with it and tried the product. Public confirmation, activity records and integration evidence have not been supplied. Confirm the second partner's name before submitting. |
-| Funding support | The team reports more than USD 1,000 from Stellar Build Delhi. Award/payment evidence and exact amount have not been supplied. This is not classified as LP capital or revenue. |
-| Team | Pallavi Jain, Garvit Arora and Piyush. No insurance, actuarial or protocol underwriting specialist is claimed. |
+| Users and partners | Founder confirms current usage is internal. Tael is the only claimed acknowledgement contact; a founder-reported X repost URL is pending. No Fianza partnership, external pilot completion or live partner integration is claimed. |
+| Funding support | Rise In publicly announced CoverFi the Delhi Build Station winner: https://www.linkedin.com/posts/risein_delhi-build-station-is-a-wrap-21-days-activity-7492576361832816640-ZZEu. The founder reports more than USD 1,000 support; exact amount/payment evidence remains unverified. Not LP capital. |
+| Team | Founder reports four members: Pallavi Jain, Garvit Arora, Piyush and a CA with crypto tokenomics experience. CA name/profile, relevant cases and availability are pending. No actuarial/underwriting credentials are invented. |
 | AI | Cursor, Claude and GPT were used; see AI_DISCLOSURE.md. |
 | Audit | No independent audit report was supplied. Internal tests/reviews are not an independent audit. |
 
@@ -35,3 +35,7 @@ Canonical registry: https://github.com/CoverFI-space/coverfi-contracts/blob/main
 ## Code verification update
 
 The current code passed 52 workspace unit tests (34 pilot tests) and 8 Python deployment-boundary tests locally on 8 November 2026. The earlier Cargo-cache permission failure was resolved. See TESTNET_RELEASE.md and the release commit CI for build evidence. Native tests alone do not attest live state. Separate on-chain evidence now records source-matched contract hashes, funding, two lifecycles and reconciled balances in TESTNET_DEPLOYMENT.md.
+
+## Resubmission revision
+
+The request is now USD 50,000 with an initial USD 5,000 advance and completion payments of USD 10,000, USD 15,000 and USD 20,000. Future mainnet launch may be planned; no current mainnet deployment is claimed. External users, provider commitments and integration remain future work. See SCF_REQUIREMENTS_CHECK.md, TEAM_RISK_PROFILE.md and PILOT_PLAN.md.

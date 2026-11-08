@@ -1,30 +1,24 @@
-# Focused funding scope
+# Focused funding scope - USD 50,000
 
-Proposed 12-week, USD 40,000 testnet project. Not an announced mainnet release.
+Updated 9 November 2026. One protected stablecoin market and one protection/reserve primitive. Current deployment is testnet only; a future gated mainnet launch is planned, not completed. Engineering target: twelve weeks from award start, with external review dependencies explicitly managed.
 
-## One primitive and one market
-
-Build and validate a single USDC testnet price-protection market using protection_engine and reserve_vault. Include protected_balance_vault and a price-feed component only as required dependencies. The source enforces distinct seven-decimal protected and payout tokens. Prices, premiums and claims use payout-token units as specified in TESTNET_RELEASE.md; no guaranteed USD reimbursement is claimed. Fresh mock token IDs, issuer, contract hashes and controlled smoke evidence are now verified in TESTNET_DEPLOYMENT.md; public app activation remains outstanding.
-
-The public workspace currently has seven crates. Its default release now contains only protection_engine, reserve_vault, protected_balance_vault and oracle_adapter. Proof gating has been removed from the engine. Legacy username, receipt and verifier crates remain outside the pilot release. The source is tested locally and deployed with controlled on-chain smoke evidence. It is not yet a third-party user pilot or integrated public app.
-
-Excluded from the ask: username_registry, receipt_registry, payment_lock_engine, floor_shield_engine, zk_verifier, partner invoice API and AI assistant. Local-only or historical implementations are not claimed as public grant deliverables. A partner integration uses only the core protection lifecycle.
+Fund protection_engine and reserve_vault plus necessary protected_balance_vault and oracle_adapter dependencies. Include only the wallet app/backend, pricing-unit implementation, reserve diagnostics, oracle reliability, monitoring and one core partner integration required to use that primitive. Unrelated registries, payment/floor engines, ZK flows, invoice APIs and AI assistants remain excluded.
 
 ```mermaid
 flowchart LR
-  W[User wallet] --> E[Protection engine]
-  P[Market-bound oracle adapter] --> E
-  E --> V[Principal custody vault]
-  E --> R[Reserve vault]
-  L[External reserve providers] --> R
+  Wallet[Wallet signs] --> Engine[Protection engine]
+  Oracle[Market-bound price observations] --> Engine
+  Engine --> Custody[Principal custody]
+  Engine --> Reserve[Reserve vault]
+  LP[Reserve providers] --> Reserve
+  Monitor[Read-only accounting and monitoring] -. reads .-> Engine
+  Monitor -. reads .-> Reserve
 ```
 
-This diagram is the proposed funded release. It is not an attestation of a current deployment.
+The four-contract testnet deployment is verified in TESTNET_DEPLOYMENT.md. Mock USDC is not Circle-issued; CFUSD has no monetary value. Current data feed and smoke wallets are team-controlled. The founder will update app/contract integration; it is not counted as completed here.
 
-## Outcomes
+Future-work phase costs: USD 15,000 connected MVP (USD 5,000 advance plus USD 10,000 completion payment), USD 15,000 usable testnet pilot/monitoring, USD 20,000 gated capped mainnet launch. Existing code and deployment are baseline evidence, not reimbursable work. BUDGET_50000.md reconciles work estimates and payments.
 
-- Weeks 1-3, USD 12,000: reproducible minimal release, denomination/settlement specification and reconciled testnet lifecycle.
-- Weeks 4-7, USD 16,000: target 10 third-party testers, 20 positions opened and settled, and two named conditional LP commitments totaling USD 10,000. No current commitments are claimed.
-- Weeks 8-12, USD 12,000: target one partner-owned live testnet integration, independent scoped technical review and a published go/no-go report.
+The founder reports a fourth member who is a CA with crypto tokenomics experience. Identity, professional background and availability remain pending. His proposed work is testable reserve accounting and financial diagnostics; insurance underwriting credentials are not invented.
 
-Targets are prospective; publish transaction evidence, named permitted commitments, actual metrics and shortfalls. See SCF_APPLICATION_REVISED.md for acceptance criteria and BUSINESS_PLAN.md for the model. The current team's underwriting experience gap remains explicit; no additional specialist member is claimed.
+External pilot target: ten independent testers and twenty completed positions after integration. Capital-demand work: three provider interviews and consented conditional letters with actual amounts where obtained. No universal USD 10,000 entry requirement or pre-grant real-capital deposit is asserted. One partner-owned integration remains a future target; Tael's reported acknowledgement is not a completed integration.

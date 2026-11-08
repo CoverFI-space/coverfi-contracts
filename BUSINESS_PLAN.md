@@ -1,6 +1,6 @@
 # One-market business and sustainability plan
 
-Planning draft, 8 November 2026. No paid mainnet activity, contracted recurring revenue or validated underwriting price is claimed.
+Planning draft, 9 November 2026. No paid mainnet activity, contracted recurring revenue or validated underwriting price is claimed.
 
 ## Customer and product
 
@@ -30,8 +30,11 @@ The source uses a market-bound oracle adapter, not the separate local single-adm
 
 ## Months 3 to 12
 
-- Months 1-3: complete the testnet pilot, measure quote-to-purchase conversion, user comprehension, settlement completion, cost per position, LP interest and partner demand. No real protection sales in this grant plan.
-- Months 4-6: assess pilot results and obtain specialist pricing/reserving review, independent security review, operational readiness and appropriate legal review before any real-value launch. No specialist team member is claimed as hired.
-- Months 7-12: consider a separately approved capped real-value pilot only if those gates and actual LP capital are met. Reinvest defined operating surplus in operations and, if approved and disclosed, protocol-owned reserve capital. Consider paid integration/support only after demonstrated demand; no enterprise contracts are claimed.
+- Months 1-3: complete the testnet pilot, measure quote-to-purchase conversion, user comprehension, settlement completion, cost per position, LP interest and partner demand. Current activity is testnet only. A future capped mainnet launch is targeted only after the stated launch gates and actual reserve capacity are met.
+- Months 4-6: assess pilot results and obtain specialist pricing/reserving review, independent security review, operational readiness and appropriate legal review before any real-value launch. A fourth member is reported as a CA with crypto tokenomics experience; relevant credentials and risk-model sign-off remain to be supplied.
+- Months 7-12: scale any capped real-value pilot only if its launch gates, approved scope and actual LP capital are met. Reinvest defined operating surplus in operations and, if approved and disclosed, protocol-owned reserve capital. Consider paid integration/support only after demonstrated demand; no enterprise contracts are claimed.
 
 If customers will not pay a price that covers risk and operations, or LPs will not accept the loss profile, stop expansion and publish findings. Track operating runway separately from restricted reserve capital. The proposed grant budget covers this pilot; ongoing support would require earned fees, confirmed service revenue or separately disclosed additional funding.
+
+
+The USD 50,000 Build request covers future deliverables, not reserve deposits, audit fees or general operating overhead. No fixed USD 10,000 LP threshold is claimed as an SCF rule. RESERVE_INTEREST_TEMPLATE.md describes conditional demand validation. The illustrative stress arithmetic in artifacts/reserve-stress-examples.json is a review input, not a validated actuarial model.

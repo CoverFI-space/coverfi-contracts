@@ -1,30 +1,24 @@
-# Response to voter feedback
+# Response to voter feedback - 9 November 2026
 
-Revision prepared 8 November 2026. Documentation changes are not proof that prospective outcomes have occurred.
-
-| Voter concern | Change and remaining evidence |
+| Concern | Change and remaining evidence |
 | --- | --- |
-| Scope too broad | Funding scope now covers one USDC testnet market and necessary dependencies. Unrelated products are excluded. Legacy source is retained outside the default four-contract pilot release; proof gating has been removed from the engine. |
-| No underwriting expertise | Explicitly disclosed. No team member added at the founder's request. Specialist pricing/reserving review remains a real-value launch gate. This concern is unresolved. |
-| No user demand | Tranches target external positions, named LP letters and one partner-owned testnet integration. No commitments or outcomes are fabricated. Letters and activity evidence remain outstanding. |
-| Mainnet contradiction | Mainnet claim removed from the revised application; registry says not deployed. Unsigned transaction artifacts do not establish deployment. |
-| Three missing public contracts | Seven-crate public inventory is explicit. Three local-only contracts are removed from the funded architecture and deployment evidence; older docs are labeled historical. They are not claimed as newly published source. |
-| Broken registry link | Registry now lives in this existing public repository at contracts.json. Fresh testnet IDs are source-matched and smoke-verified; historical IDs are preserved separately as unverified. |
-| USD 94,000 too high | Proposed ask reduced to USD 40,000 with a cost allocation and tranches totaling USD 40,000. Old listed tranches totaled USD 84,600, leaving USD 9,400 unexplained. |
-| AI disclosure | Cursor, Claude and GPT development use and team-reported line-by-line review disclosed. This revision's AI-assisted drafting is identified. Exact attribution for the original application remains unconfirmed; new revision still needs founder review. |
-| No sustainability plan | BUSINESS_PLAN.md separates fees from LP capital, shows low-volume revenue limitations, describes reserve replenishment and sets 3-12 month decision gates. Prices remain prototype parameters. |
-| Timeline too long | Proposed 12 weeks from project start, with no promised mainnet launch. Calendar dates and current program tranche requirements must be confirmed when submitting. |
+| Broad scope | One stablecoin market; protection engine/reserve plus necessary dependencies. Unrelated products excluded. |
+| Team/domain expertise | Founder reports a fourth member who is a CA with crypto tokenomics experience. Proposed ownership: reserve accounting, stress scenarios, capacity limits and unit economics. Name/profile/cases/availability pending; no actuarial credentials or prior underwriting cases invented. |
+| Demand | Current usage honestly limited to team. External pilot and provider interviews are future work. Earlier ten-testers/twenty-positions numbers are proposed outcomes, not admission rules. |
+| Mainnet contradiction | Only testnet is currently verified. Future gated mainnet launch is now included with founder permission; no existing mainnet deployment claimed. |
+| Missing source | Current funded source has four custom contracts; legacy inventory is separate. Unsupported local-only contracts are not claimed as public deliverables. |
+| Broken registry | Existing public registry includes source-matched testnet hashes, receipt evidence and archived historical IDs. |
+| Budget | Founder-selected USD 50,000. Budget estimates, phase costs and 5k/10k/15k/20k payments are reconciled in BUDGET_50000.md. Existing work is baseline, not reimbursed. |
+| AI | Full code generation by AI is disclosed with founder-reported manual contract/backend review and testing. New model/submission text remains subject to final team review. |
+| Sustainability | Fee revenue, restricted capital, loss scenarios, CA review responsibilities and operating sensitivity are described. No guaranteed yield or funded LP commitment. |
+| Timeline | Twelve-week engineering target; external audit/approval dependencies and SCF schedule-change communication are explicit. |
 
-## Verification performed for this revision
+## Corrections to earlier drafting advice
 
-- Reviewed all seven public CoverFI-space repository inventories via reference clones; inspected contracts and documentation in detail and compared them with the separate local workspace.
-- Checked the public Cargo workspace inventory and source fee constants. Did not perform an independent security audit or review every source line.
-- Checked revised document navigation, JSON, local links and Git diffs before publishing.
-- Attempted `cargo test --workspace --locked` locally. The first attempt stopped at a Cargo cache permission error. That access issue was resolved in the code revision; 52 workspace unit tests and 8 deployment-boundary tests now pass locally.
-- Live testnet deployment, mock balances and controlled wallet transactions are now verified separately in TESTNET_DEPLOYMENT.md. No mainnet activity, partner integration, award payment or external-user demand is attested.
+The draft's USD 10,000 LP target was chosen by the assistant, not found as a universal SCF prerequisite. Conditional named amounts can demonstrate interest without depositing real money before grant funding; the specific voter concern about demand is still not automatically resolved.
 
-## Before submitting
+The old USD 94,000 application's visible tranches sum to USD 84,600 because the standard 10 percent advance is separate. The USD 9,400 difference was not evidence of a budget arithmetic error. The new USD 50,000 request follows the published structure.
 
-Founders must approve the USD 40,000 budget and 12-week commitments, confirm partner spelling and permission to name contacts, attach award and pilot evidence, obtain actual named LP letters, identify historical AI drafting where possible, and review every revised answer. Do not mark future pilot milestones as completed.
+The earlier blanket testnet-only final roadmap did not match the ordinary final-launch expectation. The founder clarified that future mainnet may be planned, while current status must stay testnet. Audit-provider fees have been removed from the Build allocation and treated as a separate eligibility-based Audit Bank process.
 
-The code release is documented in TESTNET_RELEASE.md. The reserve caller authorization fix, distinct-token/decimal checks, oracle binding, voting epochs and durable expiry history are implemented. Fresh testnet deployment, matching WASM hashes, two controlled live testnet lifecycles and reserve reconciliation are now published in TESTNET_DEPLOYMENT.md. External-user demand, real LP commitments and public app integration remain outstanding; no mainnet deployment is claimed.
+Official sources: [budget](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines), [criteria](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/submission-criteria), [resubmission](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/resubmission). No guarantee is made that revised wording alone satisfies voter concerns.
